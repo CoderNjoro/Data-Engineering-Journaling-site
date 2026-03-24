@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DE Journal — Data Engineering Learning Tracker</title>
+    <meta name="description"
+        content="A professional Data Engineering learning journal — track daily progress, curriculum phases, resources, and study analytics.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>(function () { emailjs.init("YOUR_PUBLIC_KEY"); })();</script>
+
+    <!-- Theme flicker prevention -->
+    <script>
+        (function () {
+            const t = localStorage.getItem('deTheme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav class="navbar" id="mainNav">
+        <div class="nav-inner">
+            <a href="#" class="nav-brand" onclick="switchTab('dashboard',this)">
+                <div class="brand-icon">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+                    </svg>
+                </div>
+                <span class="brand-text">DE<span class="brand-accent">Journal</span></span>
+                <span class="admin-badge admin-only">Admin</span>
+            </a>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#" class="nav-link active" data-tab="dashboard" onclick="switchTab('dashboard',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                        Dashboard
+                    </a></li>
+                <li class="admin-only"><a href="#" class="nav-link" data-tab="add-entry"
+                        onclick="switchTab('add-entry',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Entry
+                    </a></li>
+                <li><a href="#" class="nav-link" data-tab="progress" onclick="switchTab('progress',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                        Progress
+                    </a></li>
+                <li><a href="#" class="nav-link" data-tab="resources" onclick="switchTab('resources',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        Resources
+                    </a></li>
+                <li><a href="#" class="nav-link" data-tab="analytics" onclick="switchTab('analytics',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Analytics
+                    </a></li>
+                <li><a href="#" class="nav-link" data-tab="contact" onclick="switchTab('contact',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Contact
+                    </a></li>
+                <li class="admin-only"><a href="#" class="nav-link" data-tab="settings"
+                        onclick="switchTab('settings',this)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                    </a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <!-- Theme Toggle -->
+                <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark theme"
+                    aria-label="Toggle theme">
+                    <!-- Sun icon (shown in dark mode) -->
+                    <svg id="iconSun" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="5" />
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
+                    <!-- Moon icon (shown in light mode) -->
+                    <svg id="iconMoon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2" style="display:none">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                    </svg>
+                </button>
+                <button class="hamburger" onclick="toggleMobileMenu()" id="hamburger" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PROFILE HEADER -->
+    <header class="profile-header">
+        <div class="header-content">
+            <div class="profile-section">
+                <div class="avatar-wrap">
+                    <img id="profileImg" src="" alt="Profile" class="profile-avatar">
+                    <button class="avatar-edit-btn admin-only"
+                        onclick="document.getElementById('profileUpload').click()" title="Change photo">
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </button>
+                    <input type="file" id="profileUpload" style="display:none" accept="image/*"
+                        onchange="handleProfileUpload(event)">
+                </div>
+                <div class="profile-text">
+                    <div class="profile-tag">
+                        <span class="status-dot"></span>
+                        Data Engineering Learner
+                    </div>
+                    <h1 id="userName">Emmanuel Mwangi</h1>
+                    <p id="userBio">Documenting my professional journey from fundamentals to mastery in Data Engineering
+                    </p>
+                    <div class="skill-tags">
+                        <span class="skill-tag">Python</span>
+                        <span class="skill-tag">SQL</span>
+                        <span class="skill-tag">Apache Spark</span>
+                        <span class="skill-tag">Cloud Infrastructure</span>
+                        <span class="skill-tag">Data Pipelines</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <div class="stat-label">Learning Days</div>
+                    <div class="stat-value" id="totalDays">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Total Logs</div>
+                    <div class="stat-value" id="totalEntries">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Day Streak</div>
+                    <div class="stat-value" id="currentStreak">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Active Phases</div>
+                    <div class="stat-value" id="completedPhases">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Total Hours</div>
+                    <div class="stat-value" id="totalHours">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-banner">
+            <div class="pb-left">
+                <span class="pb-label">Curriculum Completion</span>
+                <div class="progress-track">
+                    <div class="progress-fill" id="headerProgress" style="width:0%"></div>
+                </div>
+                <span class="pb-pct" id="headerProgressPct">0% complete</span>
+            </div>
+            <div class="pb-right">
+                <button class="btn-primary admin-only" onclick="switchTab('add-entry')">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Entry
+                </button>
+                <button class="btn-secondary" onclick="switchTab('progress')">View Progress</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="page-section active">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Learning Journal</h2>
+                    <p class="section-sub">Browse and search all entries</p>
+                </div>
+                <div class="header-controls">
+                    <div class="search-wrap">
+                        <svg class="search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35" />
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="Search entries…" oninput="renderDashboard()">
+                    </div>
+                    <button class="btn-primary admin-only" onclick="switchTab('add-entry')">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Entry
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-bar" id="phaseFilter"></div>
+
+            <div class="entries-grid" id="entriesGrid"></div>
+
+            <div id="emptyState" style="display:none;" class="empty-state">
+                <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3>No entries found</h3>
+                <p>Start your learning journey by creating your first log entry.</p>
+                <button class="btn-primary admin-only" onclick="switchTab('add-entry')">Create First Entry</button>
+            </div>
+        </section>
+
+        <!-- ADD ENTRY -->
+        <section id="add-entry" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">New Log Entry</h2>
+                    <p class="section-sub">Record what you studied today</p>
+                </div>
+            </div>
+            <div class="form-wrap">
+                <form id="entryForm" onsubmit="saveEntry(event)">
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Date</label>
+                            <input type="date" id="entryDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Learning Phase</label>
+                            <select id="entryPhase" required></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" id="entryTitle" placeholder="What did you study today?" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes &amp; Reflections</label>
+                        <textarea id="entryContent" rows="8"
+                            placeholder="Key concepts learned, challenges faced, insights, next steps…"
+                            required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Code Snippet <span class="form-label-note">— optional</span></label>
+                        <textarea id="entryCode" rows="5" class="code-area"
+                            placeholder="// Paste relevant code here…"></textarea>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Tags <span class="form-label-note">— comma
+                                    separated</span></label>
+                            <input type="text" id="entryTags" placeholder="e.g. python, sql, spark">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hours Invested</label>
+                            <input type="number" id="entryHours" step="0.5" min="0" value="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Difficulty</label>
+                        <div class="diff-picker">
+                            <label class="diff-opt">
+                                <input type="radio" name="difficulty" value="Easy" id="diffEasy">
+                                <span class="diff-label easy">Easy</span>
+                            </label>
+                            <label class="diff-opt">
+                                <input type="radio" name="difficulty" value="Medium" id="diffMedium" checked>
+                                <span class="diff-label medium">Medium</span>
+                            </label>
+                            <label class="diff-opt">
+                                <input type="radio" name="difficulty" value="Hard" id="diffHard">
+                                <span class="diff-label hard">Hard</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attachments <span class="form-label-note">— images or
+                                video</span></label>
+                        <div class="file-drop" id="fileDrop" onclick="document.getElementById('entryMedia').click()">
+                            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.5" style="margin:0 auto;color:var(--text-muted)">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p>Click to upload or drag and drop</p>
+                            <span>Supported: JPG, PNG, GIF, MP4</span>
+                        </div>
+                        <input type="file" id="entryMedia" multiple accept="image/*,video/*" style="display:none"
+                            onchange="previewFiles()">
+                        <div id="filePreview" class="file-previews"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="notifyOnSave">
+                            Send email notification when this entry is saved
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" id="saveEntryBtn">Save Entry</button>
+                        <button type="button" class="btn-secondary" onclick="switchTab('dashboard')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- PROGRESS -->
+        <section id="progress" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Curriculum Progress</h2>
+                    <p class="section-sub">Completion across all learning phases</p>
+                </div>
+            </div>
+            <div class="progress-layout">
+                <div class="phase-list-view" id="progressOverview"></div>
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div class="card">
+                        <div class="card-heading">Overall Completion</div>
+                        <div class="ring-wrap">
+                            <div class="ring-container">
+                                <svg class="ring-svg" viewBox="0 0 120 120">
+                                    <circle class="ring-bg" cx="60" cy="60" r="50" />
+                                    <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"
+                                        style="stroke-dashoffset:314;" />
+                                </svg>
+                                <div class="ring-inner">
+                                    <span id="overallProgressText">0%</span>
+                                    <small>Complete</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-list" id="overallStats"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-heading">Achievements</div>
+                        <div class="ach-list" id="achievementsWrap"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESOURCES -->
+        <section id="resources" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Reference Library</h2>
+                    <p class="section-sub">Curated learning resources and references</p>
+                </div>
+                <button class="btn-primary admin-only" onclick="openAddResourceModal()">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Resource
+                </button>
+            </div>
+            <div class="resources-grid" id="resourcesGrid"></div>
+        </section>
+
+        <!-- ANALYTICS -->
+        <section id="analytics" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Analytics</h2>
+                    <p class="section-sub">Study patterns and insights</p>
+                </div>
+            </div>
+            <div class="analytics-grid">
+                <div class="card">
+                    <div class="card-heading">Hours by Phase</div>
+                    <div id="hoursChart" class="bar-chart"></div>
+                </div>
+                <div class="card">
+                    <div class="card-heading">Difficulty Distribution</div>
+                    <div id="diffChart" class="diff-legend"></div>
+                </div>
+                <div class="card analytics-full">
+                    <div class="card-heading">Activity — Last 90 Days</div>
+                    <div id="activityCalendar" class="cal-grid"></div>
+                </div>
+                <div class="card">
+                    <div class="card-heading">Entries by Day of Week</div>
+                    <div id="weeklyChart" class="bar-chart"></div>
+                </div>
+                <div class="card">
+                    <div class="card-heading">Top Topics</div>
+                    <div id="tagsCloud" class="tags-cloud"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTACT -->
+        <section id="contact" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Contact</h2>
+                    <p class="section-sub">Get in touch or configure notifications</p>
+                </div>
+            </div>
+            <div class="contact-layout">
+                <div class="card">
+                    <div class="card-heading">Send a Message</div>
+                    <form id="contactForm" onsubmit="sendLiveEmail(event)">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="fromName" placeholder="Your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" id="replyTo" placeholder="you@example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject</label>
+                            <input type="text" id="contactSubject" placeholder="Message subject">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea id="message" rows="6" placeholder="Write your message here…" required></textarea>
+                        </div>
+                        <button type="submit" id="sendEmailBtn" class="btn-primary w-full">Send Message</button>
+                    </form>
+                </div>
+                <div class="contact-info-stack">
+                    <div class="card">
+                        <div class="card-heading">Email Notifications</div>
+                        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Configure automated
+                            daily study reminders.</p>
+                        <div class="form-group">
+                            <label class="form-label">Notification Email</label>
+                            <input type="email" id="reminderEmail" placeholder="you@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Reminder Time</label>
+                            <input type="time" id="reminderTime" value="20:00">
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle-row">
+                                <label class="toggle">
+                                    <input type="checkbox" id="emailRemindersToggle" onchange="toggleReminders()">
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span class="toggle-label">Enable daily reminders</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary w-full" onclick="saveReminderSettings()">Save Settings</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-heading">Profile Info</div>
+                        <table class="info-table">
+                            <tr>
+                                <td class="info-key">Location</td>
+                                <td class="info-val" id="infoLocation">Nairobi, Kenya</td>
+                            </tr>
+                            <tr>
+                                <td class="info-key">Focus Area</td>
+                                <td class="info-val">Data Engineering</td>
+                            </tr>
+                            <tr>
+                                <td class="info-key">Curriculum</td>
+                                <td class="info-val">12-Phase Program</td>
+                            </tr>
+                            <tr>
+                                <td class="info-key">Status</td>
+                                <td class="info-val">Open to opportunities</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS -->
+        <section id="settings" class="page-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Settings</h2>
+                    <p class="section-sub">Manage profile, security, and configuration</p>
+                </div>
+                <button class="btn-danger" onclick="toggleAdminMode()">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+            <div class="settings-grid">
+                <div class="card">
+                    <div class="card-heading">Profile</div>
+                    <div class="form-group">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" id="settingsName" onchange="updateName()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <input type="text" id="settingsBio" onchange="updateBio()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Daily Study Goal (hours)</label>
+                        <input type="number" id="dailyGoal" step="0.5" min="0.5" onchange="saveDailyGoal()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <input type="text" id="settingsLocation" onchange="saveLocation()">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-heading">EmailJS Integration</div>
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:16px;">Required for contact form
+                        and automated notifications to work.</p>
+                    <div class="form-group">
+                        <label class="form-label">Public Key</label>
+                        <input type="text" id="ejsPublicKey" placeholder="Your public key">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Service ID</label>
+                        <input type="text" id="ejsServiceId" placeholder="service_xxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Template ID</label>
+                        <input type="text" id="ejsContactTemplate" placeholder="template_xxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notification Template ID</label>
+                        <input type="text" id="ejsNotifyTemplate" placeholder="template_xxxxxxx">
+                    </div>
+                    <button class="btn-primary w-full" onclick="saveEmailJsConfig()">Save Configuration</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-heading">Automated Reminders</div>
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:16px;">Set up daily study reminders
+                        via email. Requires EmailJS to be configured.</p>
+                    <div class="form-group" style="flex-direction:row;align-items:center;margin-bottom:16px;">
+                        <input type="checkbox" id="emailRemindersToggle" onchange="toggleReminders()"
+                            style="margin-right:8px;accent-color:var(--accent);">
+                        <label for="emailRemindersToggle" style="margin-bottom:0;color:var(--text-primary);">Enable
+                            Daily Reminders</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reminder Email</label>
+                        <input type="email" id="reminderEmail" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time to Send (24h time)</label>
+                        <input type="time" id="reminderTime" value="20:00">
+                    </div>
+                    <button class="btn-primary w-full" onclick="saveReminderSettings()">Save Reminder Settings</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-heading">Security</div>
+                    <div class="form-group">
+                        <label class="form-label">Admin Email</label>
+                        <input type="email" id="adminEmailConfig">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" id="adminPassConfig" placeholder="Enter to change password">
+                    </div>
+                    <button class="btn-primary w-full" onclick="updateAdminCredentials()">Update Credentials</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-heading">Learning Phases</div>
+                    <div class="phase-manager-list" id="phaseManagerList"></div>
+                    <div class="add-phase-row">
+                        <input type="text" id="newPhaseInput" placeholder="New phase name…" style="flex:1;">
+                        <button class="btn-primary" onclick="addPhase()">Add</button>
+                    </div>
+                </div>
+
+                <div class="card" style="grid-column:1 / -1;">
+                    <div class="card-heading">Data Operations</div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Export a full backup or
+                        import a previously exported journal file.</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn-secondary" onclick="exportData()">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Export (.json)
+                        </button>
+                        <button class="btn-secondary" onclick="importData()">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Import Data
+                        </button>
+                        <button class="btn-danger" onclick="clearAllData()">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear All Data
+                        </button>
+                    </div>
+                    <input type="file" id="importFile" style="display:none" accept=".json"
+                        onchange="handleImport(event)">
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">DE<span>Journal</span></div>
+            <div class="footer-links">
+                <a href="#" onclick="switchTab('dashboard')">Dashboard</a>
+                <a href="#" onclick="switchTab('progress')">Progress</a>
+                <a href="#" onclick="switchTab('resources')">Resources</a>
+                <a href="#" onclick="switchTab('contact')">Contact</a>
+            </div>
+            <p class="footer-copy">© 2026 Data Engineering Learning Journal</p>
+        </div>
+    </footer>
+
+    <!-- ENTRY DETAIL MODAL -->
+    <div id="entryModal" class="modal-overlay" onclick="closeEntryModal(event)">
+        <div class="modal-box modal-full" id="entryModalBox">
+            <div class="modal-top">
+                <h3 id="modalEntryLabel">Entry Detail</h3>
+                <button class="modal-close-btn" onclick="closeEntryModalBtn()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalEntryContent"></div>
+        </div>
+    </div>
+
+    <!-- RESOURCE MODAL -->
+    <div id="resourceModal" class="modal-overlay" onclick="closeResourceModal(event)">
+        <div class="modal-box modal-sm" id="resourceModalBox">
+            <div class="modal-sm-header">
+                <h3>Add Resource</h3>
+                <button class="modal-close-btn" onclick="closeResourceModalBtn()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form onsubmit="saveResource(event)">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" id="resourceTitle" placeholder="Resource name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL <span class="form-label-note">— optional</span></label>
+                    <input type="url" id="resourceUrl" placeholder="https://…">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select id="resourceCategory">
+                        <option>Documentation</option>
+                        <option>Tutorial</option>
+                        <option>Book</option>
+                        <option>Course</option>
+                        <option>Tool</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">File Upload <span class="form-label-note">— PDF or video</span></label>
+                    <input type="file" id="resourceFile">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Add Resource</button>
+                    <button type="button" class="btn-secondary" onclick="closeResourceModalBtn()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ HIDDEN ADMIN LOGIN MODAL (Ctrl+Shift+A) ═══ -->
+    <div id="adminLoginModal" class="modal-overlay" onclick="closeAdminModal(event)">
+        <div class="modal-box admin-login-modal">
+            <div class="admin-modal-header">
+                <div class="admin-modal-icon">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2>Admin Portal</h2>
+                    <p>Sign in to manage journal content</p>
+                </div>
+                <button class="modal-close-btn" style="margin-left:auto" onclick="closeAdminModalBtn()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" style="padding:24px;">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="loginEmail" placeholder="admin@example.com" required
+                        autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="pass-wrap">
+                        <input type="password" id="loginPass" placeholder="••••••••" required
+                            autocomplete="current-password">
+                        <button type="button" class="eye-btn" onclick="togglePassVisibility()">
+                            <svg id="eyeIcon" width="16" height="16" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="loginError"
+                    style="display:none;color:var(--red);font-size:0.8rem;margin-bottom:12px;padding:8px 10px;background:var(--red-bg);border-radius:var(--radius-sm);">
+                    Invalid credentials. Please try again.</div>
+                <button type="submit" class="btn-primary w-full">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" onclick="closeLightbox()">
+        <img id="lightboxImg" src="" alt="">
+        <button class="lb-close-btn" onclick="closeLightbox()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast">
+        <div class="toast-dot" id="toastDot"></div>
+        <span id="toastMsg"></span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
