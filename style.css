@@ -774,6 +774,8 @@ select option {
 
 input[type="checkbox"],
 input[type="radio"] {
+  appearance: auto;
+  -webkit-appearance: auto;
   width: auto;
   accent-color: var(--accent);
 }
@@ -843,6 +845,71 @@ input[type="file"] {
   cursor: pointer;
   transition: var(--transition);
   user-select: none;
+}
+
+/* Toggle Switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-strong);
+  transition: 0.2s;
+  border-radius: 34px;
+}
+
+.toggle-track:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-track {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle input:checked + .toggle-track:before {
+  transform: translateX(20px);
+  background-color: #ffffff;
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+  cursor: pointer;
 }
 
 .diff-opt input:checked+.diff-label.easy {

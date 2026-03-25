@@ -181,10 +181,16 @@ function loadSettingsUI() {
     set('ejsServiceId', s.ejsServiceId);
     set('ejsContactTemplate', s.ejsContactTemplate);
     set('ejsNotifyTemplate', s.ejsNotifyTemplate);
-    set('reminderEmail', s.reminderEmail);
-    set('reminderTime', s.reminderTime || '20:00');
-    const tog = document.getElementById('emailRemindersToggle');
-    if (tog) tog.checked = !!s.emailReminders;
+    
+    set('contactReminderEmail', s.reminderEmail);
+    set('settingsReminderEmail', s.reminderEmail);
+    set('contactReminderTime', s.reminderTime || '20:00');
+    set('settingsReminderTime', s.reminderTime || '20:00');
+    
+    const tog1 = document.getElementById('contactRemindersToggle');
+    if (tog1) tog1.checked = !!s.emailReminders;
+    const tog2 = document.getElementById('settingsRemindersToggle');
+    if (tog2) tog2.checked = !!s.emailReminders;
 }
 
 // ─── ENTRY MANAGEMENT ────────────────────────────────────
@@ -897,33 +903,50 @@ async function sendNewEntryNotification(entry) {
     }
 }
 
-function saveReminderSettings() {
-    data.settings.reminderEmail = document.getElementById('reminderEmail').value;
-    data.settings.reminderTime = document.getElementById('reminderTime').value;
-    data.settings.emailReminders = document.getElementById('emailRemindersToggle').checked;
+function saveReminderSettings(prefix) {
+    if (!prefix) prefix = 'contact';
+    data.settings.reminderEmail = document.getElementById(prefix + 'ReminderEmail').value;
+    data.settings.reminderTime = document.getElementById(prefix + 'ReminderTime').value;
+    data.settings.emailReminders = document.getElementById(prefix + 'RemindersToggle').checked;
     save();
+    loadSettingsUI();
     scheduleReminder();
     showToast('Notification settings saved! 🔔');
 }
 
-function toggleReminders() {
-    data.settings.emailReminders = document.getElementById('emailRemindersToggle').checked;
+function toggleReminders(el) {
+    if (!el) return;
+    data.settings.emailReminders = el.checked;
     save();
+    loadSettingsUI();
     scheduleReminder();
 }
+
+let lastSentDate = localStorage.getItem('lastReminderSentDate');
 
 function scheduleReminder() {
     if (reminderInterval) clearInterval(reminderInterval);
     if (!data.settings.emailReminders) return;
 
     function checkAndSend() {
+        if (!data.settings.emailReminders) return;
         const now = new Date();
+        const todayStr = now.toDateString();
         const [h, m] = (data.settings.reminderTime || '20:00').split(':').map(Number);
-        if (now.getHours() === h && now.getMinutes() === m) {
+        
+        let shouldSend = false;
+        if (now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m)) {
+            shouldSend = true;
+        }
+
+        if (shouldSend && lastSentDate !== todayStr) {
             sendDailyReminder();
+            lastSentDate = todayStr;
+            localStorage.setItem('lastReminderSentDate', todayStr);
         }
     }
 
+    checkAndSend();
     reminderInterval = setInterval(checkAndSend, 60000);
 }
 
