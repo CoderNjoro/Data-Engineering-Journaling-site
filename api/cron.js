@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
                 accessToken: privateKey,
                 template_params: {
                     to_email: toEmail,
-                    to_name: 'Learning Data Engineer',
+                    to_name: process.env.ADMIN_NAME || 'Journal Owner',
                     entry_title: '🔔 Automated Daily Study Reminder',
                     entry_phase: 'DE Journal Background Service',
                     entry_date: new Date().toLocaleDateString(),

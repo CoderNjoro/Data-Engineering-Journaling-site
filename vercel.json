@@ -12,6 +12,14 @@
   ],
   "routes": [
     {
+      "src": "/api/data",
+      "dest": "/api/data.js"
+    },
+    {
+      "src": "/api/cron",
+      "dest": "/api/cron.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
@@ -20,6 +28,11 @@
       "dest": "/$1"
     }
   ],
+  "functions": {
+    "api/data.js": {
+      "maxDuration": 15
+    }
+  },
   "crons": [
     {
       "path": "/api/cron",

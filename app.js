@@ -3,13 +3,14 @@
 // ============================================================
 
 // ─── DEFAULT DATA STRUCTURE ──────────────────────────────
+// NOTE: No hardcoded personal info. All data comes from the cloud.
 let data = {
     profile: {
-        name: 'Emmanuel Mwangi',
-        bio: 'Documenting my professional journey from fundamentals to mastery in Data Engineering',
+        name: '',
+        bio: '',
         photo: null,
         dailyGoal: 2,
-        location: 'Nairobi, Kenya'
+        location: ''
     },
     entries: [],
     resources: [],
@@ -20,32 +21,33 @@ let data = {
         'Phase 10: Streaming', 'Phase 11: Containers', 'Phase 12: Data Quality'
     ],
     settings: {
-        adminEmail: 'admin@journal.com',
-        adminPass: 'admin123',
         emailReminders: false,
         reminderTime: '20:00',
         reminderEmail: '',
         ejsPublicKey: '',
-        ejsServiceId: 'service_wozwh25',
+        ejsServiceId: '',
         ejsContactTemplate: '',
         ejsNotifyTemplate: ''
     }
 };
 
+// Admin session is kept only in sessionStorage (clears on tab close)
 let isAdmin = false;
+let adminCredentials = null; // { email, pass } — held in memory only during session
 let currentPhaseFilter = '';
 let currentTab = 'dashboard';
 let reminderInterval = null;
 
 // ─── BOOT ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    loadStorage();
+document.addEventListener('DOMContentLoaded', async () => {
+    showLoader(true);
     checkAdminSession();
     setTodayDate();
-    renderAll();
-    setupDragDrop();
     initThemeIcons();
+    await loadData();          // fetch from cloud
+    setupDragDrop();
     scheduleReminder();
+    showLoader(false);
 });
 
 function renderAll() {
@@ -61,32 +63,72 @@ function renderAll() {
     loadSettingsUI();
 }
 
-// ─── LOCAL STORAGE ───────────────────────────────────────
-function loadStorage() {
+// ─── LOADER ───────────────────────────────────────────────
+function showLoader(visible) {
+    let el = document.getElementById('cloudLoader');
+    if (!el) return;
+    el.style.display = visible ? 'flex' : 'none';
+    // Hide/show main content while loading
+    const main = document.getElementById('mainContent');
+    if (main) main.style.opacity = visible ? '0' : '1';
+}
+
+// ─── CLOUD DATA SYNC ─────────────────────────────────────
+async function loadData() {
     try {
-        const saved = localStorage.getItem('deJournalData');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            // Merge to preserve new keys
-            data = {
-                profile: { ...data.profile, ...parsed.profile },
-                entries: parsed.entries || [],
-                resources: parsed.resources || [],
-                phases: parsed.phases || data.phases,
-                settings: { ...data.settings, ...parsed.settings }
-            };
+        const res = await fetch('/api/data');
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            console.warn('Cloud load failed:', err.error || res.status);
+            // If cloud is not configured yet, just render empty
+            renderAll();
+            return;
+        }
+        const cloud = await res.json();
+        // Merge cloud data into default structure (preserves any new keys)
+        data = {
+            profile:   { ...data.profile,   ...(cloud.profile   || {}) },
+            entries:   cloud.entries   || [],
+            resources: cloud.resources || [],
+            phases:    cloud.phases    || data.phases,
+            settings:  { ...data.settings,  ...(cloud.settings  || {}) }
+        };
+    } catch (e) {
+        console.error('Cloud fetch error:', e);
+    }
+    renderAll();
+}
+
+async function saveData() {
+    if (!isAdmin || !adminCredentials) {
+        showToast('Not authenticated. Please log in as admin.', 'error');
+        return;
+    }
+    try {
+        const credentials = btoa(`${adminCredentials.email}:${adminCredentials.pass}`);
+        const res = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${credentials}`
+            },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            console.error('Cloud save failed:', err.error || res.status);
+            showToast('⚠️ Cloud save failed. Check Vercel env vars.', 'error');
+            return;
         }
     } catch (e) {
-        console.error('Load error:', e);
+        console.error('Cloud save error:', e);
+        showToast('⚠️ Could not reach cloud. Check your connection.', 'error');
     }
 }
 
+// Legacy alias — keeps all existing save() call-sites working
 function save() {
-    try {
-        localStorage.setItem('deJournalData', JSON.stringify(data));
-    } catch (e) {
-        showToast('Storage quota exceeded. Some data may not save.', 'error');
-    }
+    saveData(); // fire-and-forget
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────
@@ -129,7 +171,7 @@ function loadProfileUI() {
     document.getElementById('userName').textContent = data.profile.name;
     document.getElementById('userBio').textContent = data.profile.bio;
     const loc = document.getElementById('infoLocation');
-    if (loc) loc.textContent = data.profile.location || 'Nairobi, Kenya';
+    if (loc) loc.textContent = data.profile.location || '';
 }
 
 async function handleProfileUpload(e) {
@@ -176,7 +218,8 @@ function loadSettingsUI() {
     set('settingsBio', p.bio);
     set('dailyGoal', p.dailyGoal);
     set('settingsLocation', p.location);
-    set('adminEmailConfig', s.adminEmail);
+    // adminEmail and adminPass are now Vercel env vars — not shown in UI
+
     set('ejsPublicKey', s.ejsPublicKey);
     set('ejsServiceId', s.ejsServiceId);
     set('ejsContactTemplate', s.ejsContactTemplate);
@@ -609,6 +652,7 @@ function renderAnalytics() {
     renderCalendar();
     renderWeeklyChart();
     renderTagsCloud();
+    initStudyChart();
 }
 
 function renderHoursChart() {
@@ -634,7 +678,6 @@ function renderDiffChart() {
     data.entries.forEach(e => { if (counts[e.difficulty] !== undefined) counts[e.difficulty]++; });
     const total = data.entries.length || 1;
     const colors = { Easy: 'var(--green)', Medium: 'var(--yellow)', Hard: 'var(--red)' };
-
     el.innerHTML = Object.entries(counts).map(([d, c]) => `
         <div class="legend-row">
             <div class="legend-swatch" style="background:${colors[d]};"></div>
@@ -648,7 +691,6 @@ function renderCalendar() {
     if (!el) return;
     const entriesByDate = {};
     data.entries.forEach(e => { entriesByDate[e.date] = (entriesByDate[e.date] || 0) + 1; });
-
     let html = '';
     const today = new Date();
     for (let i = 89; i >= 0; i--) {
@@ -692,31 +734,540 @@ function renderTagsCloud() {
     ).join('');
 }
 
-// ─── ADMIN AUTH ───────────────────────────────────────────
-function handleAdminLogin(event) {
+// ─── STUDY CHART (TradingView-style) ─────────────────────
+let studyChart = null;
+
+function initStudyChart() {
+    const canvas = document.getElementById('studyChartCanvas');
+    if (!canvas) return;
+    if (!studyChart) studyChart = new StudyChart('studyChartCanvas');
+    // Always resize first so canvas gets correct dimensions even if section was hidden on boot
+    studyChart._resize();
+    studyChart.loadData(data.entries, data.profile.dailyGoal);
+}
+
+class StudyChart {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.bars = [];
+        this.sessionLines = [];
+        this.barsPerView = 30;
+        this.scrollOffset = 0;
+        this.mouseX = -1;
+        this.mouseY = -1;
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragScrollStart = 0;
+        this.showSessions = true;
+        this.dailyGoal = 2;
+        this.MIN_BARS = 5;
+        this.MAX_BARS = 120;
+        this.PAD = { top: 28, right: 68, bottom: 44, left: 8 };
+        this.GAP_RATIO = 0.28;
+
+        // Colour palette
+        this.C = {
+            bg:          '#0a0c10',
+            grid:        'rgba(255,255,255,0.035)',
+            gridStrong:  'rgba(255,255,255,0.07)',
+            axis:        '#2a3347',
+            xhair:       'rgba(160,170,190,0.35)',
+            barUp:       '#2d9e44',
+            barDown:     '#c92a2a',
+            barNeutral:  '#3b5bdb',
+            sessH:       '#00cfde',
+            sessL:       '#ff6b6b',
+            goal:        'rgba(240,140,0,0.55)',
+            goalLabel:   '#f08c00',
+            lastLine:    'rgba(240,140,0,0.4)',
+            lastBadge:   '#f08c00',
+            text:        '#4a5568',
+            textBright:  '#e8ecf0',
+            tipBg:       '#161b25',
+            tipBorder:   '#2a3347',
+        };
+
+        this._roundRect = (ctx, x, y, w, h, r) => {
+            r = Math.min(r || 0, w / 2, Math.abs(h) / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        };
+
+        this._bind();
+        window.addEventListener('resize', () => this._resize());
+        this._resize();
+    }
+
+    _bind() {
+        const c = this.canvas;
+        c.addEventListener('mousemove', e => this._onMove(e));
+        c.addEventListener('mouseleave', () => { this.mouseX = -1; this.mouseY = -1; this.isDragging = false; this._render(); });
+        c.addEventListener('mousedown', e => {
+            const r = c.getBoundingClientRect();
+            this.dragStartX = e.clientX - r.left;
+            this.dragScrollStart = this.scrollOffset;
+            this._dragMoved = false;
+            this.isDragging = true;
+        });
+        window.addEventListener('mouseup', () => { this.isDragging = false; });
+        // NOTE: wheel zoom intentionally removed — use the +/- buttons to avoid accidental zoom
+        c.addEventListener('touchstart', e => { if (e.touches.length === 1) { this.isDragging = true; this._dragMoved = false; const r = c.getBoundingClientRect(); this.dragStartX = e.touches[0].clientX - r.left; this.dragScrollStart = this.scrollOffset; } }, { passive: true });
+        c.addEventListener('touchmove', e => { if (e.touches.length === 1 && this.isDragging) { const r = c.getBoundingClientRect(); const dx = e.touches[0].clientX - r.left - this.dragStartX; this._applyDrag(dx); } }, { passive: true });
+        c.addEventListener('touchend', () => { this.isDragging = false; });
+    }
+
+    _onMove(e) {
+        const r = this.canvas.getBoundingClientRect();
+        this.mouseX = e.clientX - r.left;
+        this.mouseY = e.clientY - r.top;
+        if (this.isDragging) this._applyDrag(this.mouseX - this.dragStartX);
+        this._render();
+    }
+
+    _applyDrag(dx) {
+        // Require at least 4px movement before treating as a drag (prevents accidental pans)
+        if (Math.abs(dx) < 4) return;
+        this._dragMoved = true;
+        const barW = this._barWidth();
+        const shifted = Math.round(-dx / barW);
+        this.scrollOffset = Math.max(0, Math.min(Math.max(0, this.bars.length - this.barsPerView), this.dragScrollStart + shifted));
+        this._render();
+    }
+
+    _resize() {
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return;
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = wrap.clientWidth  || 600;
+        const cssH = wrap.clientHeight || 340;
+        // Set physical pixels for crisp rendering on hi-DPI screens
+        this.canvas.width  = Math.round(cssW * dpr);
+        this.canvas.height = Math.round(cssH * dpr);
+        // Keep CSS display size unchanged
+        this.canvas.style.width  = cssW + 'px';
+        this.canvas.style.height = cssH + 'px';
+        this._dpr = dpr;
+        this._render();
+    }
+
+    loadData(entries, dailyGoal) {
+        this.dailyGoal = parseFloat(dailyGoal) || 2;
+        const byDate = {};
+        entries.forEach(e => {
+            if (!byDate[e.date]) byDate[e.date] = { hours: 0, phases: [], difficulty: [] };
+            byDate[e.date].hours += e.hours;
+            byDate[e.date].phases.push(e.phase.split(':')[0].trim());
+            byDate[e.date].difficulty.push(e.difficulty);
+        });
+        this.bars = Object.entries(byDate)
+            .sort(([a], [b]) => (a > b ? 1 : -1))
+            .map(([date, d]) => ({
+                date, hours: Math.round(d.hours * 10) / 10,
+                phases: [...new Set(d.phases)], difficulty: d.difficulty
+            }));
+        this.barsPerView = Math.min(Math.max(this.bars.length, 5), 30);
+        this.scrollOffset = 0;
+        this._calcSessionLines();
+        this._render();
+        this._updateZoomUI();
+
+        // Empty state
+        const em = document.getElementById('studyChartEmpty');
+        if (em) em.style.display = this.bars.length === 0 ? 'flex' : 'none';
+    }
+
+    _calcSessionLines() {
+        this.sessionLines = [];
+        if (this.bars.length < 2) return;
+        // Group bars by ISO week (Mon-Sun)
+        const weeks = new Map();
+        this.bars.forEach((bar, idx) => {
+            const d = new Date(bar.date + 'T12:00:00');
+            const dow = d.getDay();
+            const mon = new Date(d);
+            mon.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+            const key = mon.toISOString().split('T')[0];
+            if (!weeks.has(key)) weeks.set(key, []);
+            weeks.get(key).push({ ...bar, idx });
+        });
+
+        weeks.forEach(wBars => {
+            if (wBars.length === 0) return;
+            const high = wBars.reduce((a, b) => b.hours > a.hours ? b : a);
+            const nonZ = wBars.filter(b => b.hours > 0);
+            if (!nonZ.length) return;
+            const low = nonZ.reduce((a, b) => b.hours < a.hours ? b : a);
+
+            // High mitigation: first future bar with hours >= high.hours
+            let hEnd = this.bars.length - 1;
+            for (let i = high.idx + 1; i < this.bars.length; i++) {
+                if (this.bars[i].hours >= high.hours) { hEnd = i; break; }
+            }
+            // Low mitigation: first future bar with hours <= low.hours (and > 0)
+            let lEnd = this.bars.length - 1;
+            if (low.idx !== high.idx) {
+                for (let i = low.idx + 1; i < this.bars.length; i++) {
+                    if (this.bars[i].hours > 0 && this.bars[i].hours <= low.hours) { lEnd = i; break; }
+                }
+            }
+            this.sessionLines.push({ price: high.hours, type: 'high', startIdx: high.idx, endIdx: hEnd, label: 'W.H' });
+            if (low.idx !== high.idx) {
+                this.sessionLines.push({ price: low.hours, type: 'low', startIdx: low.idx, endIdx: lEnd, label: 'W.L' });
+            }
+        });
+    }
+
+    _barWidth() {
+        const w = this.canvas.width / (this._dpr || 1);
+        return (w - this.PAD.left - this.PAD.right) / this.barsPerView;
+    }
+
+    _visibleBars() {
+        const start = Math.max(0, this.bars.length - this.barsPerView - this.scrollOffset);
+        const end   = Math.max(0, this.bars.length - this.scrollOffset);
+        return { start, bars: this.bars.slice(start, end) };
+    }
+
+    _yRange(bars) {
+        const hours = bars.map(b => b.hours);
+        const maxH  = Math.max(...hours, this.dailyGoal, 1);
+        const pad   = maxH * 0.18;
+        return { min: -maxH * 0.05, max: maxH + pad };
+    }
+
+    _toY(price, yr) {
+        const h = (this.canvas.height / (this._dpr || 1)) - this.PAD.top - this.PAD.bottom;
+        return this.PAD.top + h - ((price - yr.min) / (yr.max - yr.min)) * h;
+    }
+
+    _yTicks(yr) {
+        const range = yr.max - yr.min;
+        const rough = range / 6;
+        const mag   = Math.pow(10, Math.floor(Math.log10(Math.max(rough, 0.01))));
+        const step  = Math.ceil(rough / mag) * mag || 1;
+        const ticks = [];
+        const start = Math.ceil(yr.min / step) * step;
+        for (let t = start; t <= yr.max + 0.001; t += step) {
+            if (t >= -0.001) ticks.push(Math.round(t * 100) / 100);
+        }
+        return ticks;
+    }
+
+    _render() {
+        const ctx = this.ctx;
+        const dpr = this._dpr || 1;
+        const W = this.canvas.width / dpr;
+        const H = this.canvas.height / dpr;
+        const P = this.PAD, C = this.C;
+        const chartW = W - P.left - P.right;
+        const chartH = H - P.top  - P.bottom;
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, W, H);
+
+        if (!this.bars.length) {
+            ctx.restore();
+            return;
+        }
+
+        const { start, bars: vis } = this._visibleBars();
+        const yr  = this._yRange(vis);
+        const bW  = this._barWidth();
+        const bIW = bW * (1 - this.GAP_RATIO);
+        const ticks = this._yTicks(yr);
+
+        // ── Grid ────────────────────────────────────
+        ticks.forEach(t => {
+            const y = this._toY(t, yr);
+            ctx.strokeStyle = t === 0 ? C.gridStrong : C.grid;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(P.left, y); ctx.lineTo(W - P.right, y); ctx.stroke();
+        });
+
+        // ── Daily goal line ──────────────────────────
+        if (this.dailyGoal > yr.min && this.dailyGoal < yr.max) {
+            const gy = this._toY(this.dailyGoal, yr);
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = C.goal;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(P.left, gy); ctx.lineTo(W - P.right, gy); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = C.goalLabel;
+            ctx.font = '9px Inter,sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('Goal ' + this.dailyGoal + 'h', W - P.right - 4, gy - 3);
+        }
+
+        // ── Session H/L lines ────────────────────────
+        if (this.showSessions) {
+            this.sessionLines.forEach(sl => {
+                if (sl.endIdx < start || sl.startIdx >= start + vis.length) return;
+                const lStart = Math.max(sl.startIdx - start, 0);
+                const lEnd   = Math.min(sl.endIdx   - start, vis.length - 1);
+                const x1 = P.left + lStart * bW;
+                const x2 = P.left + (lEnd + 1) * bW;
+                const y  = this._toY(sl.price, yr);
+                const col = sl.type === 'high' ? C.sessH : C.sessL;
+
+                ctx.setLineDash([3, 4]);
+                ctx.strokeStyle = col;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Label pill at line start
+                ctx.font = 'bold 8.5px JetBrains Mono,monospace';
+                ctx.textAlign = 'left';
+                const lw = ctx.measureText(sl.label).width + 6;
+                ctx.fillStyle = col + '22';
+                this._roundRect(ctx, x1 + 1, y - 9, lw, 10, 2);
+                ctx.fill();
+                ctx.fillStyle = col;
+                ctx.fillText(sl.label, x1 + 4, y - 1);
+
+                // Mitigation dot
+                if (sl.endIdx < this.bars.length - 1 && lEnd < vis.length - 1) {
+                    ctx.beginPath();
+                    ctx.arc(x2, y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = col;
+                    ctx.fill();
+                }
+            });
+        }
+
+        // ── Bars ─────────────────────────────────────
+        vis.forEach((bar, li) => {
+            const x  = P.left + li * bW + (bW - bIW) / 2;
+            const yT = this._toY(bar.hours, yr);
+            const yB = this._toY(0, yr);
+            const bh = Math.max(1, yB - yT);
+            const color = bar.hours >= this.dailyGoal ? C.barUp : (bar.hours > 0 ? C.barDown : C.barNeutral);
+            ctx.fillStyle = color;
+            this._roundRect(ctx, x, yT, bIW, bh, Math.min(3, bIW / 2));
+            ctx.fill();
+        });
+
+        // ── Latest value line ────────────────────────
+        if (vis.length > 0) {
+            const last = vis[vis.length - 1];
+            const ly = this._toY(last.hours, yr);
+            ctx.setLineDash([2, 3]);
+            ctx.strokeStyle = C.lastLine;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(P.left, ly); ctx.lineTo(W - P.right, ly); ctx.stroke();
+            ctx.setLineDash([]);
+            // Badge
+            ctx.fillStyle = C.lastBadge;
+            this._roundRect(ctx, W - P.right + 2, ly - 9, P.right - 3, 18, 3);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 9.5px JetBrains Mono,monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(last.hours.toFixed(1) + 'h', W - P.right + (P.right - 3) / 2 + 2, ly + 4);
+        }
+
+        // ── Y-axis labels ────────────────────────────
+        ctx.fillStyle = C.text;
+        ctx.font = '9.5px JetBrains Mono,monospace';
+        ctx.textAlign = 'left';
+        ticks.forEach(t => {
+            ctx.fillText(t.toFixed(1), W - P.right + 5, this._toY(t, yr) + 4);
+        });
+
+        // ── Axes ─────────────────────────────────────
+        ctx.strokeStyle = C.axis; ctx.lineWidth = 1; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(P.left, P.top); ctx.lineTo(P.left, H - P.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(P.left, H - P.bottom); ctx.lineTo(W - P.right, H - P.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(W - P.right, P.top); ctx.lineTo(W - P.right, H - P.bottom); ctx.stroke();
+
+        // ── X-axis labels ────────────────────────────
+        const every = Math.max(1, Math.floor(this.barsPerView / 8));
+        ctx.fillStyle = C.text; ctx.font = '9px Inter,sans-serif'; ctx.textAlign = 'center';
+        vis.forEach((bar, li) => {
+            if (li % every !== 0) return;
+            const x = P.left + (li + 0.5) * bW;
+            const d = new Date(bar.date + 'T12:00:00');
+            ctx.fillText(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - P.bottom + 16);
+            ctx.strokeStyle = C.axis; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x, H - P.bottom); ctx.lineTo(x, H - P.bottom + 4); ctx.stroke();
+        });
+
+        // ── Crosshair ────────────────────────────────
+        if (this.mouseX > P.left && this.mouseX < W - P.right &&
+            this.mouseY > P.top  && this.mouseY < H - P.bottom) {
+            ctx.setLineDash([3, 4]);
+            ctx.strokeStyle = C.xhair; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(this.mouseX, P.top); ctx.lineTo(this.mouseX, H - P.bottom); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(P.left, this.mouseY); ctx.lineTo(W - P.right, this.mouseY); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Price label on right axis
+            const hoverPrice = yr.min + (H - P.bottom - this.mouseY) / chartH * (yr.max - yr.min);
+            if (hoverPrice >= 0) {
+                ctx.fillStyle = 'rgba(100,110,130,0.85)';
+                this._roundRect(ctx, W - P.right + 2, this.mouseY - 9, P.right - 3, 18, 3);
+                ctx.fill();
+                ctx.fillStyle = C.textBright; ctx.font = '9.5px JetBrains Mono,monospace'; ctx.textAlign = 'center';
+                ctx.fillText(Math.max(0, hoverPrice).toFixed(1) + 'h', W - P.right + (P.right - 3) / 2 + 2, this.mouseY + 4);
+            }
+
+            // Date label on X-axis
+            const li = Math.floor((this.mouseX - P.left) / bW);
+            if (li >= 0 && li < vis.length) {
+                const hBar = vis[li];
+                const dl   = new Date(hBar.date + 'T12:00:00')
+                    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                ctx.font = '9px Inter,sans-serif'; ctx.textAlign = 'center';
+                const dlW = ctx.measureText(dl).width + 12;
+                ctx.fillStyle = 'rgba(100,110,130,0.85)';
+                this._roundRect(ctx, this.mouseX - dlW / 2, H - P.bottom + 2, dlW, 16, 3);
+                ctx.fill();
+                ctx.fillStyle = C.textBright;
+                ctx.fillText(dl, this.mouseX, H - P.bottom + 13);
+                this._drawTooltip(ctx, hBar, this.mouseX, this.mouseY, W, H, yr);
+            }
+        }
+        
+        ctx.restore();
+    }
+
+    _drawTooltip(ctx, bar, mx, my, W, H, yr) {
+        const C  = this.C;
+        const lines = [
+            bar.date,
+            `Hours: ${bar.hours.toFixed(1)}h`,
+            bar.hours >= this.dailyGoal ? '✓ Goal met' : `Goal: ${this.dailyGoal}h`,
+            bar.phases.length ? `${bar.phases[0]}` : null,
+        ].filter(Boolean);
+
+        ctx.font = '11px Inter,sans-serif';
+        const lH = 17, px = 10, py = 8;
+        const tw = Math.max(...lines.map(l => ctx.measureText(l).width)) + px * 2 + 4;
+        const th = lines.length * lH + py * 2;
+
+        let tx = mx + 14;
+        let ty = my - th / 2;
+        if (tx + tw > W - this.PAD.right) tx = mx - tw - 14;
+        if (ty < this.PAD.top) ty = this.PAD.top + 4;
+        if (ty + th > H - this.PAD.bottom) ty = H - this.PAD.bottom - th - 4;
+
+        // Box
+        ctx.fillStyle = C.tipBg; ctx.strokeStyle = C.tipBorder; ctx.lineWidth = 1; ctx.setLineDash([]);
+        this._roundRect(ctx, tx, ty, tw, th, 5); ctx.fill(); ctx.stroke();
+
+        // Accent strip
+        ctx.fillStyle = bar.hours >= this.dailyGoal ? C.barUp : C.barDown;
+        this._roundRect(ctx, tx, ty, 3, th, [5, 0, 0, 5]); ctx.fill();
+
+        // Text
+        lines.forEach((line, i) => {
+            ctx.fillStyle   = i === 0 ? C.textBright : (line.startsWith('✓') ? '#2d9e44' : C.text);
+            ctx.font        = i === 0 ? 'bold 11px Inter,sans-serif' : '11px Inter,sans-serif';
+            ctx.textAlign   = 'left';
+            ctx.fillText(line, tx + px + 2, ty + py + (i + 0.78) * lH);
+        });
+    }
+
+    zoomIn() {
+        const step = Math.max(1, Math.floor(this.barsPerView * 0.2));
+        this.barsPerView = Math.max(this.MIN_BARS, this.barsPerView - step);
+        this.scrollOffset = Math.min(this.scrollOffset, Math.max(0, this.bars.length - this.barsPerView));
+        this._render(); this._updateZoomUI();
+    }
+
+    zoomOut() {
+        const step = Math.max(1, Math.floor(this.barsPerView * 0.2));
+        this.barsPerView = Math.min(this.MAX_BARS, Math.min(this.bars.length, this.barsPerView + step));
+        this.scrollOffset = Math.min(this.scrollOffset, Math.max(0, this.bars.length - this.barsPerView));
+        this._render(); this._updateZoomUI();
+    }
+
+    scrollToLatest() {
+        this.scrollOffset = 0;
+        this._render();
+    }
+
+    toggleSessions(btn) {
+        this.showSessions = !this.showSessions;
+        if (btn) btn.classList.toggle('active', this.showSessions);
+        this._render();
+    }
+
+    _updateZoomUI() {
+        const pct = Math.round((30 / this.barsPerView) * 100);
+        const lvEl = document.getElementById('studyChartZoomLevel');
+        if (lvEl) lvEl.textContent = pct + '%';
+        const inBtn  = document.getElementById('studyChartZoomIn');
+        const outBtn = document.getElementById('studyChartZoomOut');
+        if (inBtn)  inBtn.disabled  = this.barsPerView <= this.MIN_BARS;
+        if (outBtn) outBtn.disabled = this.barsPerView >= Math.min(this.MAX_BARS, this.bars.length);
+    }
+}
+
+
+
+async function handleAdminLogin(event) {
     event.preventDefault();
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPass').value;
     const errEl = document.getElementById('loginError');
+    const btn = event.target.querySelector('button[type="submit"]');
 
-    if (email === data.settings.adminEmail && pass === data.settings.adminPass) {
-        isAdmin = true;
-        localStorage.setItem('deJournalAdmin', 'true');
-        applyAdminState();
-        closeAdminModalBtn();
-        switchTab('dashboard');
-        showToast('Welcome back. Admin mode active.');
-        if (errEl) errEl.style.display = 'none';
-    } else {
-        if (errEl) errEl.style.display = 'block';
-        document.getElementById('loginPass').value = '';
-        document.getElementById('loginPass').focus();
+    if (btn) { btn.disabled = true; btn.textContent = 'Verifying...'; }
+
+    try {
+        // Verify credentials server-side — never checked in the browser
+        const credentials = btoa(`${email}:${pass}`);
+        const res = await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${credentials}`
+            },
+            // Send current data unchanged — this is just a credential test
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            isAdmin = true;
+            adminCredentials = { email, pass };
+            sessionStorage.setItem('deJournalAdmin', 'true');
+            sessionStorage.setItem('deJournalAdminCred', btoa(`${email}:${pass}`));
+            applyAdminState();
+            closeAdminModalBtn();
+            switchTab('dashboard');
+            showToast('Welcome back. Admin mode active.');
+            if (errEl) errEl.style.display = 'none';
+        } else {
+            if (errEl) errEl.style.display = 'block';
+            document.getElementById('loginPass').value = '';
+            document.getElementById('loginPass').focus();
+        }
+    } catch (e) {
+        console.error('Login error:', e);
+        if (errEl) { errEl.textContent = 'Connection error. Try again.'; errEl.style.display = 'block'; }
     }
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
 function toggleAdminMode() {
     isAdmin = false;
-    localStorage.removeItem('deJournalAdmin');
+    adminCredentials = null;
+    sessionStorage.removeItem('deJournalAdmin');
+    sessionStorage.removeItem('deJournalAdminCred');
     applyAdminState();
     switchTab('dashboard');
     showToast('Signed out successfully.');
@@ -754,8 +1305,19 @@ function closeAdminModalBtn() {
 }
 
 function checkAdminSession() {
-    if (localStorage.getItem('deJournalAdmin') === 'true') {
+    if (sessionStorage.getItem('deJournalAdmin') === 'true') {
         isAdmin = true;
+        const stored = sessionStorage.getItem('deJournalAdminCred');
+        if (stored) {
+            try {
+                const decoded = atob(stored);
+                const colonIdx = decoded.indexOf(':');
+                adminCredentials = {
+                    email: decoded.slice(0, colonIdx),
+                    pass:  decoded.slice(colonIdx + 1)
+                };
+            } catch {}
+        }
         applyAdminState();
     }
 }
@@ -768,12 +1330,9 @@ function applyAdminState() {
 }
 
 function updateAdminCredentials() {
-    const email = document.getElementById('adminEmailConfig').value.trim();
-    const pass = document.getElementById('adminPassConfig').value;
-    if (email) data.settings.adminEmail = email;
-    if (pass) data.settings.adminPass = pass;
-    save();
-    showToast('Credentials updated.');
+    // Credentials are now managed via Vercel environment variables (ADMIN_EMAIL, ADMIN_PASS).
+    // They cannot be changed from the browser for security. Update them in the Vercel dashboard.
+    showToast('Credentials are managed via Vercel environment variables. Update them in the Vercel dashboard.', 'warning');
 }
 
 function togglePassVisibility() {
@@ -922,7 +1481,7 @@ function toggleReminders(el) {
     scheduleReminder();
 }
 
-let lastSentDate = localStorage.getItem('lastReminderSentDate');
+let lastSentDate = sessionStorage.getItem('lastReminderSentDate');
 
 function scheduleReminder() {
     if (reminderInterval) clearInterval(reminderInterval);
@@ -942,7 +1501,7 @@ function scheduleReminder() {
         if (shouldSend && lastSentDate !== todayStr) {
             sendDailyReminder();
             lastSentDate = todayStr;
-            localStorage.setItem('lastReminderSentDate', todayStr);
+            sessionStorage.setItem('lastReminderSentDate', todayStr);
         }
     }
 
@@ -1023,24 +1582,43 @@ function handleImport(e) {
     const f = e.target.files[0];
     if (!f) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
         try {
             const parsed = JSON.parse(ev.target.result);
             if (!parsed.entries) throw new Error('Invalid format');
-            data = { ...data, ...parsed };
-            save();
+            data = {
+                profile:   { ...data.profile,   ...(parsed.profile   || {}) },
+                entries:   parsed.entries   || [],
+                resources: parsed.resources || [],
+                phases:    parsed.phases    || data.phases,
+                settings:  { ...data.settings,  ...(parsed.settings  || {}) }
+            };
+            await saveData();
             renderAll();
-            showToast('Data imported successfully! Reloading...', 'success');
-            setTimeout(() => location.reload(), 1500);
+            showToast('Data imported and synced to cloud! ☁️', 'success');
         } catch { showToast('Invalid file format.', 'error'); }
     };
     reader.readAsText(f);
 }
 
-function clearAllData() {
-    if (!confirm('⚠️ This will permanently erase ALL journal data. Are you sure?')) return;
-    localStorage.clear();
-    showToast('All data cleared. Reloading...');
+async function clearAllData() {
+    if (!confirm('⚠️ This will permanently erase ALL journal data from the cloud. Are you sure?')) return;
+    // Reset to empty state and push to cloud
+    data = {
+        profile:   { name: '', bio: '', photo: null, dailyGoal: 2, location: '' },
+        entries:   [],
+        resources: [],
+        phases: [
+            'Phase 1: Foundations', 'Phase 2: SQL & Databases', 'Phase 3: Linux CLI',
+            'Phase 4: Version Control', 'Phase 5: Core Concepts', 'Phase 6: Cloud Infra',
+            'Phase 7: Apache Spark', 'Phase 8: Orchestration', 'Phase 9: Warehousing',
+            'Phase 10: Streaming', 'Phase 11: Containers', 'Phase 12: Data Quality'
+        ],
+        settings:  { emailReminders: false, reminderTime: '20:00', reminderEmail: '',
+                     ejsPublicKey: '', ejsServiceId: '', ejsContactTemplate: '', ejsNotifyTemplate: '' }
+    };
+    await saveData();
+    showToast('All data cleared from cloud. Reloading...');
     setTimeout(() => location.reload(), 1200);
 }
 
@@ -1108,7 +1686,7 @@ function toggleTheme() {
     const curr = html.getAttribute('data-theme') || 'dark';
     const next = curr === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    localStorage.setItem('deTheme', next);
+    localStorage.setItem('deTheme', next); // theme preference stays local — intentional
     initThemeIcons();
 }
 
