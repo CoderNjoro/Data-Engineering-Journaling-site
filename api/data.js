@@ -14,7 +14,7 @@ module.exports = async function handler(req, res) {
     // ── CORS ─────────────────────────────────────────────────
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Verify-Only');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    // ── POST: admin-protected write ───────────────────────────
+    // ── POST: admin-protected write (or verify-only login) ────
     if (req.method === 'POST') {
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminPass  = process.env.ADMIN_PASS;
@@ -81,6 +81,11 @@ module.exports = async function handler(req, res) {
 
         if (email !== adminEmail || pass !== adminPass) {
             return res.status(403).json({ error: 'Invalid admin credentials.' });
+        }
+
+        // Login check only — do NOT overwrite cloud data on sign-in
+        if (req.headers['x-verify-only'] === 'true') {
+            return res.status(200).json({ verified: true });
         }
 
         // Write new data to JSONBin

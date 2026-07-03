@@ -160,17 +160,11 @@
                 <div class="profile-text">
                     <div class="profile-tag">
                         <span class="status-dot"></span>
-                        Data Engineering Learner
+                        <span id="profileTag">Data Engineering Learner</span>
                     </div>
                     <h1 id="userName"></h1>
                     <p id="userBio"></p>
-                    <div class="skill-tags">
-                        <span class="skill-tag">Python</span>
-                        <span class="skill-tag">SQL</span>
-                        <span class="skill-tag">Apache Spark</span>
-                        <span class="skill-tag">Cloud Infrastructure</span>
-                        <span class="skill-tag">Data Pipelines</span>
-                    </div>
+                    <div class="skill-tags" id="skillTags"></div>
                 </div>
             </div>
 
@@ -549,19 +543,19 @@
                         <table class="info-table">
                             <tr>
                                 <td class="info-key">Location</td>
-                                <td class="info-val" id="infoLocation">Nairobi, Kenya</td>
+                                <td class="info-val" id="infoLocation">—</td>
                             </tr>
                             <tr>
                                 <td class="info-key">Focus Area</td>
-                                <td class="info-val">Data Engineering</td>
+                                <td class="info-val" id="infoFocusArea">—</td>
                             </tr>
                             <tr>
                                 <td class="info-key">Curriculum</td>
-                                <td class="info-val">12-Phase Program</td>
+                                <td class="info-val" id="infoCurriculum">—</td>
                             </tr>
                             <tr>
                                 <td class="info-key">Status</td>
-                                <td class="info-val">Open to opportunities</td>
+                                <td class="info-val" id="infoStatus">—</td>
                             </tr>
                         </table>
                     </div>
@@ -602,6 +596,26 @@
                     <div class="form-group">
                         <label class="form-label">Location</label>
                         <input type="text" id="settingsLocation" onchange="saveLocation()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tagline</label>
+                        <input type="text" id="settingsTagline" placeholder="Data Engineering Learner" onchange="saveTagline()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Skills (comma-separated)</label>
+                        <input type="text" id="settingsSkills" placeholder="Python, SQL, Apache Spark" onchange="saveSkills()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Focus Area</label>
+                        <input type="text" id="settingsFocusArea" placeholder="Data Engineering" onchange="saveFocusArea()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Curriculum</label>
+                        <input type="text" id="settingsCurriculum" placeholder="12-Phase Program" onchange="saveCurriculum()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <input type="text" id="settingsStatus" placeholder="Open to opportunities" onchange="saveStatus()">
                     </div>
                 </div>
 
@@ -655,15 +669,10 @@
 
                 <div class="card">
                     <div class="card-heading">Security</div>
-                    <div class="form-group">
-                        <label class="form-label">Admin Email</label>
-                        <input type="email" id="adminEmailConfig">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">New Password</label>
-                        <input type="password" id="adminPassConfig" placeholder="Enter to change password">
-                    </div>
-                    <button class="btn-primary w-full" onclick="updateAdminCredentials()">Update Credentials</button>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">
+                        Admin login uses environment variables on Vercel (<code>ADMIN_EMAIL</code>, <code>ADMIN_PASS</code>).
+                        Default credentials are in <code>.env.example</code>. Press <kbd>Ctrl+Shift+A</kbd> to sign in.
+                    </p>
                 </div>
 
                 <div class="card">
@@ -813,7 +822,7 @@
             <form onsubmit="handleAdminLogin(event)" style="padding:24px;">
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" id="loginEmail" placeholder="admin@example.com" required
+                    <input type="email" id="loginEmail" placeholder="admin@dejournal.com" required
                         autocomplete="username">
                 </div>
                 <div class="form-group">

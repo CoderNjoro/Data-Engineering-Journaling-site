@@ -10,7 +10,12 @@ let data = {
         bio: '',
         photo: null,
         dailyGoal: 2,
-        location: ''
+        location: '',
+        tagline: '',
+        skills: [],
+        focusArea: '',
+        curriculum: '',
+        status: ''
     },
     entries: [],
     resources: [],
@@ -44,7 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkAdminSession();
     setTodayDate();
     initThemeIcons();
-    await loadData();          // fetch from cloud
+    await loadData();
+    if (isAdmin) await syncPendingMigration();
     setupDragDrop();
     scheduleReminder();
     showLoader(false);
@@ -74,35 +80,66 @@ function showLoader(visible) {
 }
 
 // ─── CLOUD DATA SYNC ─────────────────────────────────────
+function mergeJournalData(base, incoming) {
+    if (!incoming) return base;
+    const inEntries = incoming.entries || [];
+    const baseEntries = base.entries || [];
+    return {
+        profile:   { ...base.profile,   ...(incoming.profile   || {}) },
+        entries:   inEntries.length >= baseEntries.length ? inEntries : baseEntries,
+        resources: (incoming.resources || []).length >= (base.resources || []).length
+            ? (incoming.resources || []) : (base.resources || []),
+        phases:    incoming.phases?.length ? incoming.phases : base.phases,
+        settings:  { ...base.settings,  ...(incoming.settings  || {}) }
+    };
+}
+
+function loadLocalStorageData() {
+    try {
+        const saved = localStorage.getItem('deJournalData');
+        if (saved) return JSON.parse(saved);
+    } catch (e) {
+        console.warn('Could not read local journal backup:', e);
+    }
+    return null;
+}
+
 async function loadData() {
+    let cloudLoaded = false;
     try {
         const res = await fetch('/api/data');
-        if (!res.ok) {
+        if (res.ok) {
+            const cloud = await res.json();
+            data = mergeJournalData(data, cloud);
+            cloudLoaded = true;
+        } else {
             const err = await res.json().catch(() => ({}));
             console.warn('Cloud load failed:', err.error || res.status);
-            // If cloud is not configured yet, just render empty
-            renderAll();
-            return;
         }
-        const cloud = await res.json();
-        // Merge cloud data into default structure (preserves any new keys)
-        data = {
-            profile:   { ...data.profile,   ...(cloud.profile   || {}) },
-            entries:   cloud.entries   || [],
-            resources: cloud.resources || [],
-            phases:    cloud.phases    || data.phases,
-            settings:  { ...data.settings,  ...(cloud.settings  || {}) }
-        };
     } catch (e) {
         console.error('Cloud fetch error:', e);
     }
+
+    // Recover journals saved before cloud migration (localStorage)
+    const local = loadLocalStorageData();
+    if (local) {
+        const hadLocalEntries = (local.entries || []).length > (data.entries || []).length;
+        const hadLocalProfile = local.profile?.name && !data.profile.name;
+        if (hadLocalEntries || hadLocalProfile || !cloudLoaded) {
+            data = mergeJournalData(data, local);
+            if (hadLocalEntries || hadLocalProfile) {
+                sessionStorage.setItem('deJournalPendingMigration', 'true');
+            }
+        }
+    }
+
     renderAll();
 }
 
 async function saveData() {
     if (!isAdmin || !adminCredentials) {
         showToast('Not authenticated. Please log in as admin.', 'error');
-        return;
+        return false;
     }
     try {
         const credentials = btoa(`${adminCredentials.email}:${adminCredentials.pass}`);
@@ -117,13 +154,24 @@ async function saveData() {
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             console.error('Cloud save failed:', err.error || res.status);
-            showToast('⚠️ Cloud save failed. Check Vercel env vars.', 'error');
-            return;
+            showToast('Cloud save failed. Check Vercel env vars.', 'error');
+            return false;
         }
+        // Keep a local backup for recovery
+        try { localStorage.setItem('deJournalData', JSON.stringify(data)); } catch {}
+        sessionStorage.removeItem('deJournalPendingMigration');
+        return true;
     } catch (e) {
         console.error('Cloud save error:', e);
-        showToast('⚠️ Could not reach cloud. Check your connection.', 'error');
+        showToast('Could not reach cloud. Check your connection.', 'error');
+        return false;
     }
+}
+
+async function syncPendingMigration() {
+    if (sessionStorage.getItem('deJournalPendingMigration') !== 'true') return;
+    const ok = await saveData();
+    if (ok) showToast('Local journal data synced to cloud.', 'success');
 }
 
 // Legacy alias — keeps all existing save() call-sites working
@@ -167,11 +215,26 @@ function toggleMobileMenu() {
 function loadProfileUI() {
     const img = document.getElementById('profileImg');
     img.src = data.profile.photo ||
-        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.profile.name)}&backgroundColor=7c3aed&textColor=ffffff`;
-    document.getElementById('userName').textContent = data.profile.name;
-    document.getElementById('userBio').textContent = data.profile.bio;
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.profile.name || 'DE')}&backgroundColor=7c3aed&textColor=ffffff`;
+    document.getElementById('userName').textContent = data.profile.name || 'Your Name';
+    document.getElementById('userBio').textContent = data.profile.bio || '';
+
+    const tagEl = document.getElementById('profileTag');
+    if (tagEl) tagEl.textContent = data.profile.tagline || 'Data Engineering Learner';
+
+    const skillsWrap = document.getElementById('skillTags');
+    if (skillsWrap) {
+        const skills = data.profile.skills || [];
+        skillsWrap.innerHTML = skills.length
+            ? skills.map(s => `<span class="skill-tag">${esc(s)}</span>`).join('')
+            : '';
+    }
+
     const loc = document.getElementById('infoLocation');
-    if (loc) loc.textContent = data.profile.location || '';
+    if (loc) loc.textContent = data.profile.location || '—';
+    setText('infoFocusArea', data.profile.focusArea || '—');
+    setText('infoCurriculum', data.profile.curriculum || '—');
+    setText('infoStatus', data.profile.status || '—');
 }
 
 async function handleProfileUpload(e) {
@@ -205,8 +268,38 @@ function saveDailyGoal() {
 
 function saveLocation() {
     data.profile.location = document.getElementById('settingsLocation').value;
-    const loc = document.getElementById('infoLocation');
-    if (loc) loc.textContent = data.profile.location;
+    loadProfileUI();
+    save();
+}
+
+function saveTagline() {
+    data.profile.tagline = document.getElementById('settingsTagline').value.trim();
+    loadProfileUI();
+    save();
+}
+
+function saveSkills() {
+    const raw = document.getElementById('settingsSkills').value;
+    data.profile.skills = raw.split(',').map(s => s.trim()).filter(Boolean);
+    loadProfileUI();
+    save();
+}
+
+function saveFocusArea() {
+    data.profile.focusArea = document.getElementById('settingsFocusArea').value.trim();
+    loadProfileUI();
+    save();
+}
+
+function saveCurriculum() {
+    data.profile.curriculum = document.getElementById('settingsCurriculum').value.trim();
+    loadProfileUI();
+    save();
+}
+
+function saveStatus() {
+    data.profile.status = document.getElementById('settingsStatus').value.trim();
+    loadProfileUI();
     save();
 }
 
@@ -218,6 +311,11 @@ function loadSettingsUI() {
     set('settingsBio', p.bio);
     set('dailyGoal', p.dailyGoal);
     set('settingsLocation', p.location);
+    set('settingsTagline', p.tagline);
+    set('settingsSkills', (p.skills || []).join(', '));
+    set('settingsFocusArea', p.focusArea);
+    set('settingsCurriculum', p.curriculum);
+    set('settingsStatus', p.status);
     // adminEmail and adminPass are now Vercel env vars — not shown in UI
 
     set('ejsPublicKey', s.ejsPublicKey);
@@ -1228,16 +1326,16 @@ async function handleAdminLogin(event) {
     if (btn) { btn.disabled = true; btn.textContent = 'Verifying...'; }
 
     try {
-        // Verify credentials server-side — never checked in the browser
+        // Verify credentials server-side — never writes data on login
         const credentials = btoa(`${email}:${pass}`);
         const res = await fetch('/api/data', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Basic ${credentials}`
+                'Authorization': `Basic ${credentials}`,
+                'X-Verify-Only': 'true'
             },
-            // Send current data unchanged — this is just a credential test
-            body: JSON.stringify(data)
+            body: JSON.stringify({})
         });
 
         if (res.ok) {
@@ -1250,6 +1348,7 @@ async function handleAdminLogin(event) {
             switchTab('dashboard');
             showToast('Welcome back. Admin mode active.');
             if (errEl) errEl.style.display = 'none';
+            await syncPendingMigration();
         } else {
             if (errEl) errEl.style.display = 'block';
             document.getElementById('loginPass').value = '';
@@ -1586,13 +1685,7 @@ function handleImport(e) {
         try {
             const parsed = JSON.parse(ev.target.result);
             if (!parsed.entries) throw new Error('Invalid format');
-            data = {
-                profile:   { ...data.profile,   ...(parsed.profile   || {}) },
-                entries:   parsed.entries   || [],
-                resources: parsed.resources || [],
-                phases:    parsed.phases    || data.phases,
-                settings:  { ...data.settings,  ...(parsed.settings  || {}) }
-            };
+            data = mergeJournalData(data, parsed);
             await saveData();
             renderAll();
             showToast('Data imported and synced to cloud! ☁️', 'success');
@@ -1605,7 +1698,8 @@ async function clearAllData() {
     if (!confirm('⚠️ This will permanently erase ALL journal data from the cloud. Are you sure?')) return;
     // Reset to empty state and push to cloud
     data = {
-        profile:   { name: '', bio: '', photo: null, dailyGoal: 2, location: '' },
+        profile:   { name: '', bio: '', photo: null, dailyGoal: 2, location: '',
+                     tagline: '', skills: [], focusArea: '', curriculum: '', status: '' },
         entries:   [],
         resources: [],
         phases: [
