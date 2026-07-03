@@ -1751,6 +1751,38 @@ function handleImport(e) {
     reader.readAsText(f);
 }
 
+async function pushLocalCacheToCloud() {
+    if (!isAdmin) {
+        showToast('Authentication required.', 'error');
+        return;
+    }
+    const local = loadLocalStorageData();
+    if (!local || (!local.entries?.length && !local.profile?.name)) {
+        showToast('No local backup data found in this browser.', 'warning');
+        return;
+    }
+    const count = local.entries?.length || 0;
+    const name = local.profile?.name || 'Robert Njoroge';
+    
+    if (!confirm(`⚠️ This will overwrite the cloud database with the local data found in this browser:\n\n• Profile: ${name}\n• Total Entries: ${count}\n\nAre you sure you want to push this to the cloud?`)) {
+        return;
+    }
+    
+    data.profile = { ...data.profile, ...local.profile };
+    data.entries = local.entries || [];
+    data.resources = local.resources || [];
+    if (local.phases && local.phases.length) data.phases = local.phases;
+    if (local.settings) data.settings = { ...data.settings, ...local.settings };
+    
+    const ok = await saveData();
+    if (ok) {
+        showToast('Local browser data pushed and synced to cloud! ☁️', 'success');
+        renderAll();
+    } else {
+        showToast('Failed to save data. Check your connection or Vercel config.', 'error');
+    }
+}
+
 async function clearAllData() {
     if (!confirm('⚠️ This will permanently erase ALL journal data from the cloud. Are you sure?')) return;
     // Reset to empty state and push to cloud
