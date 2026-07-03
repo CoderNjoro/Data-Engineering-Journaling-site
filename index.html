@@ -617,6 +617,10 @@
                         <label class="form-label">Status</label>
                         <input type="text" id="settingsStatus" placeholder="Open to opportunities" onchange="saveStatus()">
                     </div>
+                    <button class="btn-primary w-full" id="saveAllProfileBtn" onclick="saveAllProfile()" style="margin-top:8px;">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        Save All Profile Changes
+                    </button>
                 </div>
 
                 <div class="card">
@@ -669,10 +673,18 @@
 
                 <div class="card">
                     <div class="card-heading">Security</div>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">
-                        Admin login uses environment variables on Vercel (<code>ADMIN_EMAIL</code>, <code>ADMIN_PASS</code>).
-                        Default credentials are in <code>.env.example</code>. Press <kbd>Ctrl+Shift+A</kbd> to sign in.
+                    <div id="securityAdminInfo" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);border-radius:var(--radius-sm);">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <span style="font-size:0.82rem;font-weight:600;color:var(--accent-primary);">Signed in as Admin</span>
+                        </div>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Email: <strong id="securityAdminEmail" style="color:var(--text-primary);"></strong></p>
+                    </div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+                        Admin credentials are stored as Vercel environment variables (<code>ADMIN_EMAIL</code>, <code>ADMIN_PASS</code>).
+                        To change them, update these variables in your Vercel dashboard and redeploy.
                     </p>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">Shortcut: <kbd>Ctrl+Shift+A</kbd> to open / close admin portal.</p>
                 </div>
 
                 <div class="card">
@@ -819,10 +831,10 @@
                     </svg>
                 </button>
             </div>
-            <form onsubmit="handleAdminLogin(event)" style="padding:24px;">
+            <form onsubmit="handleAdminLogin(event)" style="padding:24px 24px 20px;">
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" id="loginEmail" placeholder="admin@dejournal.com" required
+                    <input type="email" id="loginEmail" placeholder="your admin email" required
                         autocomplete="username">
                 </div>
                 <div class="form-group">
@@ -843,9 +855,29 @@
                 </div>
                 <div id="loginError"
                     style="display:none;color:var(--red);font-size:0.8rem;margin-bottom:12px;padding:8px 10px;background:var(--red-bg);border-radius:var(--radius-sm);">
-                    Invalid credentials. Please try again.</div>
-                <button type="submit" class="btn-primary w-full">Sign In</button>
+                    Invalid credentials. Please try again.
+                </div>
+                <button type="submit" id="loginSubmitBtn" class="btn-primary w-full">Sign In</button>
+                <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:12px;margin-bottom:0;">
+                    Credentials are set via Vercel env vars: <code>ADMIN_EMAIL</code> &amp; <code>ADMIN_PASS</code>
+                </p>
             </form>
+            <!-- Post-login profile shortcut (shown after successful auth) -->
+            <div id="adminPostLogin" style="display:none;padding:0 24px 24px;">
+                <div style="border-top:1px solid var(--border-subtle);padding-top:18px;">
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">You are signed in. What would you like to do?</p>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <button class="btn-primary w-full" onclick="closeAdminModalBtn();switchTab('settings');">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            Edit My Profile
+                        </button>
+                        <button class="btn-secondary w-full" onclick="closeAdminModalBtn();switchTab('add-entry');">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            New Journal Entry
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

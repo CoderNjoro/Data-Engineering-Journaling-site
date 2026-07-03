@@ -303,6 +303,41 @@ function saveStatus() {
     save();
 }
 
+// ─── SAVE ALL PROFILE (bulk save button) ─────────────────
+async function saveAllProfile() {
+    const btn = document.getElementById('saveAllProfileBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    // Read all profile fields at once
+    const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const name = getVal('settingsName');
+    if (name) data.profile.name = name;
+    data.profile.bio        = getVal('settingsBio');
+    data.profile.location   = getVal('settingsLocation');
+    data.profile.tagline    = getVal('settingsTagline');
+    data.profile.focusArea  = getVal('settingsFocusArea');
+    data.profile.curriculum = getVal('settingsCurriculum');
+    data.profile.status     = getVal('settingsStatus');
+    data.profile.dailyGoal  = parseFloat(document.getElementById('dailyGoal')?.value) || 2;
+
+    const rawSkills = getVal('settingsSkills');
+    data.profile.skills = rawSkills ? rawSkills.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    loadProfileUI();
+    const ok = await saveData();
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = ok
+            ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Saved!'
+            : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Save All Profile Changes';
+        if (ok) setTimeout(() => {
+            btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Save All Profile Changes';
+        }, 2500);
+    }
+    if (ok) showToast('Profile saved and synced to cloud! ✓');
+}
+
 function loadSettingsUI() {
     const s = data.settings;
     const p = data.profile;
@@ -1344,10 +1379,13 @@ async function handleAdminLogin(event) {
             sessionStorage.setItem('deJournalAdmin', 'true');
             sessionStorage.setItem('deJournalAdminCred', btoa(`${email}:${pass}`));
             applyAdminState();
-            closeAdminModalBtn();
-            switchTab('dashboard');
-            showToast('Welcome back. Admin mode active.');
+            // Show post-login action panel instead of closing immediately
+            const loginForm = document.querySelector('#adminLoginModal form');
+            const postLogin = document.getElementById('adminPostLogin');
+            if (loginForm) loginForm.style.display = 'none';
+            if (postLogin) postLogin.style.display = 'block';
             if (errEl) errEl.style.display = 'none';
+            showToast('Welcome back! Admin mode active. ✓');
             await syncPendingMigration();
         } else {
             if (errEl) errEl.style.display = 'block';
@@ -1401,6 +1439,11 @@ function closeAdminModalBtn() {
     document.body.style.overflow = '';
     const errEl = document.getElementById('loginError');
     if (errEl) errEl.style.display = 'none';
+    // Reset modal to login form state for next open
+    const loginForm = document.querySelector('#adminLoginModal form');
+    const postLogin = document.getElementById('adminPostLogin');
+    if (loginForm) loginForm.style.display = 'block';
+    if (postLogin) postLogin.style.display = 'none';
 }
 
 function checkAdminSession() {
@@ -1426,6 +1469,11 @@ function applyAdminState() {
     renderDashboard();
     renderResources();
     buildPhaseFilters();
+    // Update Security card in Settings
+    const secInfo = document.getElementById('securityAdminInfo');
+    const secEmail = document.getElementById('securityAdminEmail');
+    if (secInfo) secInfo.style.display = isAdmin ? 'block' : 'none';
+    if (secEmail && adminCredentials) secEmail.textContent = adminCredentials.email;
 }
 
 function updateAdminCredentials() {
