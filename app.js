@@ -80,6 +80,8 @@ function showLoader(visible) {
 }
 
 // ─── CLOUD DATA SYNC ─────────────────────────────────────
+// Cloud (JSONBin) is the single source of truth.
+// localStorage is kept only as an offline fallback.
 function mergeJournalData(base, incoming) {
     if (!incoming) return base;
     const inEntries = incoming.entries || [];
@@ -110,8 +112,12 @@ async function loadData() {
         const res = await fetch('/api/data');
         if (res.ok) {
             const cloud = await res.json();
+            // Cloud is the authoritative source — use it directly, no local merge on top
             data = mergeJournalData(data, cloud);
             cloudLoaded = true;
+            // Mirror cloud data to localStorage so offline fallback stays current
+            try { localStorage.setItem('deJournalData', JSON.stringify(data)); } catch {}
+            sessionStorage.removeItem('deJournalPendingMigration');
         } else {
             const err = await res.json().catch(() => ({}));
             console.warn('Cloud load failed:', err.error || res.status);
@@ -120,14 +126,16 @@ async function loadData() {
         console.error('Cloud fetch error:', e);
     }
 
-    // Recover journals saved before cloud migration (localStorage)
-    const local = loadLocalStorageData();
-    if (local) {
-        const hadLocalEntries = (local.entries || []).length > (data.entries || []).length;
-        const hadLocalProfile = local.profile?.name && !data.profile.name;
-        if (hadLocalEntries || hadLocalProfile || !cloudLoaded) {
+    // ── Offline-only fallback ───────────────────────────────
+    // ONLY read localStorage when the cloud API is completely unreachable.
+    // When cloud succeeds we NEVER merge local data on top — that would let
+    // stale browser-cached data overwrite the real cloud data in other browsers.
+    if (!cloudLoaded) {
+        const local = loadLocalStorageData();
+        if (local) {
             data = mergeJournalData(data, local);
-            if (hadLocalEntries || hadLocalProfile) {
+            console.info('Offline mode: serving from local backup.');
+            if (local.entries?.length || local.profile?.name) {
                 sessionStorage.setItem('deJournalPendingMigration', 'true');
             }
         }
@@ -135,6 +143,7 @@ async function loadData() {
 
     renderAll();
 }
+
 
 async function saveData() {
     if (!isAdmin || !adminCredentials) {
