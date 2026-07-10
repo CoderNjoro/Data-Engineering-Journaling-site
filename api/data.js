@@ -105,7 +105,11 @@ module.exports = async function handler(req, res) {
 
             // 1. Get current SHA of the file
             let currentSha = null;
+            let getStatus = 'not attempted';
+            let tokenScopes = 'unknown';
             const getRes = await fetch(`${apiUrl}?ref=${BRANCH}`, { headers });
+            getStatus = `${getRes.status} ${getRes.statusText}`;
+            tokenScopes = getRes.headers.get('x-oauth-scopes') || 'none';
             if (getRes.ok) {
                 const getJson = await getRes.json();
                 currentSha = getJson.sha;
@@ -125,8 +129,13 @@ module.exports = async function handler(req, res) {
 
             if (!putRes.ok) {
                 const err = await putRes.text();
+                const putScopes = putRes.headers.get('x-oauth-scopes') || 'none';
                 console.error('GitHub PUT error:', err);
-                return res.status(putRes.status).json({ error: 'Failed to commit to GitHub.', details: err });
+                return res.status(putRes.status).json({
+                    error: 'Failed to commit to GitHub.',
+                    details: err,
+                    debug: { getStatus, tokenScopes, putScopes, sha: currentSha, apiUrl }
+                });
             }
 
             return res.status(200).json({ success: true });
