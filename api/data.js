@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
             if (!response.ok) {
                 const err = await response.text();
                 console.error('JSONBin GET error:', err);
-                return res.status(response.status).json({ error: 'Failed to fetch data from cloud.' });
+                return res.status(response.status).json({ error: 'Failed to fetch data from cloud.', details: err });
             }
 
             const data = await response.json();
@@ -107,7 +107,7 @@ module.exports = async function handler(req, res) {
             if (!response.ok) {
                 const err = await response.text();
                 console.error('JSONBin PUT error:', err);
-                return res.status(response.status).json({ error: 'Failed to save data to cloud.' });
+                return res.status(response.status).json({ error: 'Failed to save data to cloud.', details: err });
             }
 
             return res.status(200).json({ success: true });
