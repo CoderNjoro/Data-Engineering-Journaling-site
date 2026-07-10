@@ -1,14 +1,16 @@
 // ============================================================
-// api/data.js — Cloud data proxy for DE Journal
+// api/data.js — GitHub API data proxy for DE Journal
 // ============================================================
-// Environment variables required (set in Vercel dashboard):
-//   JSONBIN_API_KEY   — Your JSONBin.io master API key
-//   JSONBIN_ID        — The ID of your JSONBin bin
-//   ADMIN_EMAIL       — Your admin login email
-//   ADMIN_PASS        — Your admin login password
+// Environment variables required:
+//   GITHUB_TOKEN    — Personal Access Token with repo scope
+//   ADMIN_EMAIL     — Your admin login email
+//   ADMIN_PASS      — Your admin login password
 // ============================================================
 
-const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+const REPO_OWNER = process.env.VERCEL_GIT_REPO_OWNER || 'CoderNjoro';
+const REPO_NAME = process.env.VERCEL_GIT_REPO_SLUG || 'Data-Engineering-Journaling-site';
+const PATH = 'data/journal.json';
+const BRANCH = process.env.VERCEL_GIT_COMMIT_REF || 'main';
 
 module.exports = async function handler(req, res) {
     // ── CORS ─────────────────────────────────────────────────
@@ -20,40 +22,46 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const apiKey = process.env.JSONBIN_API_KEY;
-    const binId  = process.env.JSONBIN_ID;
-
-    if (!apiKey || !binId) {
+    const githubToken = process.env.GITHUB_TOKEN;
+    if (!githubToken) {
         return res.status(500).json({
-            error: 'Server not configured. Set JSONBIN_API_KEY and JSONBIN_ID in Vercel environment variables.'
+            error: 'Server not configured. Set GITHUB_TOKEN in Vercel environment variables.'
         });
     }
 
-    // ── GET: public read ──────────────────────────────────────
+    const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PATH}`;
+    const headers = {
+        'Authorization': `Bearer ${githubToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Vercel-App'
+    };
+
+    // ── GET: read from GitHub ────────────────────────────────
     if (req.method === 'GET') {
         try {
-            const response = await fetch(`${JSONBIN_BASE}/${binId}/latest`, {
-                headers: {
-                    'X-Master-Key': apiKey,
-                    'X-Bin-Meta': 'false'
-                }
-            });
+            const response = await fetch(`${apiUrl}?ref=${BRANCH}`, { headers });
+
+            if (response.status === 404) {
+                // If file doesn't exist yet, return empty default schema
+                return res.status(200).json({ profile: {}, settings: {}, entries: [], resources: [], phases: [] });
+            }
 
             if (!response.ok) {
                 const err = await response.text();
-                console.error('JSONBin GET error:', err);
-                return res.status(response.status).json({ error: 'Failed to fetch data from cloud.', details: err });
+                console.error('GitHub GET error:', err);
+                return res.status(response.status).json({ error: 'Failed to fetch data from GitHub.', details: err });
             }
 
-            const data = await response.json();
-            return res.status(200).json(data);
+            const json = await response.json();
+            const content = Buffer.from(json.content, 'base64').toString('utf8');
+            return res.status(200).json(JSON.parse(content));
         } catch (e) {
             console.error('GET handler error:', e);
             return res.status(500).json({ error: 'Internal server error.', message: e.message });
         }
     }
 
-    // ── POST: admin-protected write (or verify-only login) ────
+    // ── POST: admin-protected write to GitHub ────────────────
     if (req.method === 'POST') {
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminPass  = process.env.ADMIN_PASS;
@@ -62,7 +70,7 @@ module.exports = async function handler(req, res) {
             return res.status(500).json({ error: 'Admin credentials not configured on server.' });
         }
 
-        // Verify admin credentials from Authorization header (Basic auth)
+        // Verify admin credentials
         const authHeader = req.headers['authorization'] || '';
         if (!authHeader.startsWith('Basic ')) {
             return res.status(401).json({ error: 'Unauthorized. Admin credentials required.' });
@@ -74,7 +82,7 @@ module.exports = async function handler(req, res) {
             const decoded = Buffer.from(base64, 'base64').toString('utf8');
             const colonIdx = decoded.indexOf(':');
             email = decoded.slice(0, colonIdx);
-            pass  = decoded.slice(colonIdx + 1); // allow colons in password
+            pass  = decoded.slice(colonIdx + 1);
         } catch {
             return res.status(401).json({ error: 'Invalid authorization format.' });
         }
@@ -83,31 +91,42 @@ module.exports = async function handler(req, res) {
             return res.status(403).json({ error: 'Invalid admin credentials.' });
         }
 
-        // Login check only — do NOT overwrite cloud data on sign-in
+        // Login check only
         if (req.headers['x-verify-only'] === 'true') {
             return res.status(200).json({ verified: true });
         }
 
-        // Write new data to JSONBin
         try {
             let body = req.body;
             if (typeof body === 'string') {
                 body = JSON.parse(body);
             }
+            const newContentBase64 = Buffer.from(JSON.stringify(body, null, 2)).toString('base64');
 
-            const response = await fetch(`${JSONBIN_BASE}/${binId}`, {
+            // 1. Get current SHA of the file
+            let currentSha = null;
+            const getRes = await fetch(`${apiUrl}?ref=${BRANCH}`, { headers });
+            if (getRes.ok) {
+                const getJson = await getRes.json();
+                currentSha = getJson.sha;
+            }
+
+            // 2. Commit the new file
+            const putRes = await fetch(apiUrl, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': apiKey
-                },
-                body: JSON.stringify(body)
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "chore: update journal data via admin panel",
+                    content: newContentBase64,
+                    sha: currentSha,
+                    branch: BRANCH
+                })
             });
 
-            if (!response.ok) {
-                const err = await response.text();
-                console.error('JSONBin PUT error:', err);
-                return res.status(response.status).json({ error: 'Failed to save data to cloud.', details: err });
+            if (!putRes.ok) {
+                const err = await putRes.text();
+                console.error('GitHub PUT error:', err);
+                return res.status(putRes.status).json({ error: 'Failed to commit to GitHub.', details: err });
             }
 
             return res.status(200).json({ success: true });
@@ -117,6 +136,5 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    // ── Method not allowed ────────────────────────────────────
     return res.status(405).json({ error: 'Method not allowed.' });
 };

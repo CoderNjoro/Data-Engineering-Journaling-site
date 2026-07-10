@@ -1,0 +1,24 @@
+{
+    "profile": {
+        "name": "Data Engineer",
+        "avatar": "",
+        "bio": "Building scalable pipelines.",
+        "location": "Remote",
+        "tagline": "Turning data into insights",
+        "skills": ["SQL", "Python", "ETL"],
+        "focusArea": "Data Architecture",
+        "curriculum": "Advanced Data Engineering",
+        "status": "Available for roles",
+        "dailyGoal": 2
+    },
+    "settings": {
+        "theme": "dark",
+        "notifications": true,
+        "github": "",
+        "linkedin": "",
+        "twitter": ""
+    },
+    "entries": [],
+    "resources": [],
+    "phases": ["Foundation", "Pipelines", "Cloud", "Analytics", "Project"]
+}
