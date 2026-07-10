@@ -7,10 +7,10 @@
 //   ADMIN_PASS      — Your admin login password
 // ============================================================
 
-const REPO_OWNER = process.env.VERCEL_GIT_REPO_OWNER || 'CoderNjoro';
-const REPO_NAME = process.env.VERCEL_GIT_REPO_SLUG || 'Data-Engineering-Journaling-site';
+const REPO_OWNER = 'CoderNjoro';
+const REPO_NAME = 'Data-Engineering-Journaling-site';
 const PATH = 'data/journal.json';
-const BRANCH = process.env.VERCEL_GIT_COMMIT_REF || 'main';
+const BRANCH = 'main';
 
 module.exports = async function handler(req, res) {
     // ── CORS ─────────────────────────────────────────────────
