@@ -416,7 +416,15 @@ async function saveEntry(event) {
     }
 
     data.entries.push(entry);
-    save();
+    const ok = await saveData();
+    
+    if (!ok) {
+        btn.textContent = 'Save Entry';
+        btn.disabled = false;
+        // Revert local state to avoid out-of-sync
+        data.entries = data.entries.filter(e => e.id !== entry.id);
+        return;
+    }
 
     const shouldEmail = document.getElementById('notifyOnSave') && document.getElementById('notifyOnSave').checked;
     if (shouldEmail && data.settings.ejsServiceId && data.settings.ejsNotifyTemplate) {
@@ -440,11 +448,20 @@ function resetEntryForm() {
     setTodayDate();
 }
 
-function deleteEntry(id) {
+async function deleteEntry(id) {
     if (!isAdmin) return;
     if (!confirm('Delete this entry?')) return;
+    
+    // Store backup in case save fails
+    const backup = [...data.entries];
     data.entries = data.entries.filter(e => e.id !== id);
-    save();
+    
+    const ok = await saveData();
+    if (!ok) {
+        data.entries = backup;
+        return;
+    }
+    
     renderDashboard();
     updateStats();
     showToast('Entry deleted.');
@@ -745,7 +762,13 @@ async function saveResource(event) {
     }
 
     data.resources.push(res);
-    save();
+    const ok = await saveData();
+    
+    if (!ok) {
+        data.resources.pop();
+        return;
+    }
+    
     closeResourceModalBtn();
     event.target.reset();
     renderResources();
@@ -779,10 +802,18 @@ function renderResources() {
         </div>`).join('');
 }
 
-function deleteResource(id) {
+async function deleteResource(id) {
     if (!isAdmin || !confirm('Remove this resource?')) return;
+    
+    const backup = [...data.resources];
     data.resources = data.resources.filter(r => r.id !== id);
-    save();
+    
+    const ok = await saveData();
+    if (!ok) {
+        data.resources = backup;
+        return;
+    }
+    
     renderResources();
     showToast('Resource removed.');
 }
