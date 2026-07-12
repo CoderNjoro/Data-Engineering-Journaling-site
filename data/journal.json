@@ -7,7 +7,7 @@
         "tagline": "Turning data into insights",
         "skills": ["SQL", "Python", "ETL"],
         "focusArea": "Data Architecture",
-        "curriculum": "Advanced Data Engineering",
+        "curriculum": "Complete Data Engineering Roadmap 2025",
         "status": "Available for roles",
         "dailyGoal": 2
     },
@@ -20,5 +20,13 @@
     },
     "entries": [],
     "resources": [],
-    "phases": ["Foundation", "Pipelines", "Cloud", "Analytics", "Project"]
+    "phases": [
+        "Phase 1-2: Foundations",
+        "Phase 3-4: Essential Developer Skills",
+        "Phase 5-6: Core Concepts & Cloud Platforms",
+        "Phase 7-8: Big Data Processing & Orchestration",
+        "Phase 9-10: Data Warehousing & Real-Time Streaming",
+        "Phase 11-12: Infrastructure & Data Quality",
+        "Phase 13: Building Your Portfolio"
+    ]
 }

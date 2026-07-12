@@ -4,6 +4,17 @@
 
 // ─── DEFAULT DATA STRUCTURE ──────────────────────────────
 // NOTE: No hardcoded personal info. All data comes from the cloud.
+
+const phaseTargets = {
+    'Phase 1-2: Foundations': 150,
+    'Phase 3-4: Essential Developer Skills': 60,
+    'Phase 5-6: Core Concepts & Cloud Platforms': 165,
+    'Phase 7-8: Big Data Processing & Orchestration': 140,
+    'Phase 9-10: Data Warehousing & Real-Time Streaming': 105,
+    'Phase 11-12: Infrastructure & Data Quality': 80,
+    'Phase 13: Building Your Portfolio': 50
+};
+
 let data = {
     profile: {
         name: '',
@@ -20,10 +31,13 @@ let data = {
     entries: [],
     resources: [],
     phases: [
-        'Phase 1: Foundations', 'Phase 2: SQL & Databases', 'Phase 3: Linux CLI',
-        'Phase 4: Version Control', 'Phase 5: Core Concepts', 'Phase 6: Cloud Infra',
-        'Phase 7: Apache Spark', 'Phase 8: Orchestration', 'Phase 9: Warehousing',
-        'Phase 10: Streaming', 'Phase 11: Containers', 'Phase 12: Data Quality'
+        'Phase 1-2: Foundations',
+        'Phase 3-4: Essential Developer Skills',
+        'Phase 5-6: Core Concepts & Cloud Platforms',
+        'Phase 7-8: Big Data Processing & Orchestration',
+        'Phase 9-10: Data Warehousing & Real-Time Streaming',
+        'Phase 11-12: Infrastructure & Data Quality',
+        'Phase 13: Building Your Portfolio'
     ],
     settings: {
         emailReminders: false,
@@ -627,10 +641,18 @@ function renderProgress() {
     const wrap = document.getElementById('progressOverview');
     if (!wrap) return;
 
+    let totalTarget = 0;
+    let totalHrsAll = 0;
+
     wrap.innerHTML = data.phases.map(p => {
         const ents = data.entries.filter(e => e.phase === p);
         const hrs = ents.reduce((s, e) => s + e.hours, 0);
-        const pct = Math.min((ents.length / 5) * 100, 100);
+        const target = phaseTargets[p] || 40;
+        const pct = Math.min((hrs / target) * 100, 100);
+        
+        totalTarget += target;
+        totalHrsAll += hrs;
+
         return `
         <div class="phase-row">
             <div class="phase-row-header">
@@ -638,12 +660,12 @@ function renderProgress() {
                 <span class="phase-pct">${Math.round(pct)}%</span>
             </div>
             <div class="phase-track"><div class="phase-fill" style="width:${pct}%"></div></div>
-            <div class="phase-row-meta"><span>${ents.length} entries</span><span>${hrs.toFixed(1)}h</span></div>
+            <div class="phase-row-meta"><span>${ents.length} entries</span><span>${hrs.toFixed(1)}h / ${target}h</span></div>
         </div>`;
     }).join('');
 
     const active = new Set(data.entries.map(e => e.phase)).size;
-    const overallPct = data.phases.length > 0 ? Math.round((active / data.phases.length) * 100) : 0;
+    const overallPct = totalTarget > 0 ? Math.round(Math.min((totalHrsAll / totalTarget) * 100, 100)) : 0;
 
     const txt = document.getElementById('overallProgressText');
     if (txt) txt.textContent = overallPct + '%';
@@ -706,8 +728,16 @@ function updateStats() {
 
     const hpb = document.getElementById('headerProgress');
     const hpt = document.getElementById('headerProgressPct');
-    const active = new Set(data.entries.map(e => e.phase)).size;
-    const pct = data.phases.length > 0 ? Math.round((active / data.phases.length) * 100) : 0;
+    
+    let totalTarget = 0;
+    let totalHrsAll = 0;
+    data.phases.forEach(p => {
+        totalTarget += phaseTargets[p] || 40;
+        const ents = data.entries.filter(e => e.phase === p);
+        totalHrsAll += ents.reduce((s, e) => s + e.hours, 0);
+    });
+    
+    const pct = totalTarget > 0 ? Math.round(Math.min((totalHrsAll / totalTarget) * 100, 100)) : 0;
     if (hpb) hpb.style.width = pct + '%';
     if (hpt) hpt.textContent = `${pct}% Complete`;
 }
@@ -1823,10 +1853,13 @@ async function clearAllData() {
         entries:   [],
         resources: [],
         phases: [
-            'Phase 1: Foundations', 'Phase 2: SQL & Databases', 'Phase 3: Linux CLI',
-            'Phase 4: Version Control', 'Phase 5: Core Concepts', 'Phase 6: Cloud Infra',
-            'Phase 7: Apache Spark', 'Phase 8: Orchestration', 'Phase 9: Warehousing',
-            'Phase 10: Streaming', 'Phase 11: Containers', 'Phase 12: Data Quality'
+            'Phase 1-2: Foundations',
+            'Phase 3-4: Essential Developer Skills',
+            'Phase 5-6: Core Concepts & Cloud Platforms',
+            'Phase 7-8: Big Data Processing & Orchestration',
+            'Phase 9-10: Data Warehousing & Real-Time Streaming',
+            'Phase 11-12: Infrastructure & Data Quality',
+            'Phase 13: Building Your Portfolio'
         ],
         settings:  { emailReminders: false, reminderTime: '20:00', reminderEmail: '',
                      ejsPublicKey: '', ejsServiceId: '', ejsContactTemplate: '', ejsNotifyTemplate: '' }
