@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -156,6 +156,14 @@
 
     <!-- PROFILE HEADER -->
     <header class="profile-header">
+        <div class="hero-side-dots" id="heroSideDots">
+            <div class="hero-dot active" data-dot="dashboard" onclick="switchTab('dashboard', this)"></div>
+            <div class="hero-dot" data-dot="progress" onclick="switchTab('progress', this)"></div>
+            <div class="hero-dot" data-dot="resources" onclick="switchTab('resources', this)"></div>
+            <div class="hero-dot" data-dot="analytics" onclick="switchTab('analytics', this)"></div>
+            <div class="hero-dot" data-dot="contact" onclick="switchTab('contact', this)"></div>
+        </div>
+        <div class="hero-scroll-cue">Scroll to explore</div>
         <div class="header-content">
             <div class="profile-section">
                 <div class="avatar-wrap">
@@ -1047,6 +1055,34 @@
       // Only run if user hasn't requested reduced motion
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         drawNetwork();
+      }
+
+      // Scrolled state logic for navbar
+      var nav = document.getElementById('mainNav');
+      if (nav) {
+        window.addEventListener('scroll', function() {
+          if (window.pageYOffset > 50) {
+            nav.classList.add('scrolled');
+          } else {
+            nav.classList.remove('scrolled');
+          }
+        }, { passive: true });
+      }
+
+      // Synchronize hero pagination dots with selected tabs
+      var originalSwitchTab = window.switchTab;
+      if (originalSwitchTab) {
+        window.switchTab = function(tabId, el) {
+          originalSwitchTab(tabId, el);
+          var dots = document.querySelectorAll('#heroSideDots .hero-dot');
+          dots.forEach(function(dot) {
+            if (dot.getAttribute('data-dot') === tabId) {
+              dot.classList.add('active');
+            } else {
+              dot.classList.remove('active');
+            }
+          });
+        };
       }
     })();
     </script>
