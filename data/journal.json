@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "profile": {
     "name": "Robert Njoroge",
     "bio": "Building scalable pipelines.",
@@ -73,36 +72,3 @@
     "twitter": ""
   }
 }
-=======
-    "profile": {
-        "name": "Data Engineer",
-        "avatar": "",
-        "bio": "Building scalable pipelines.",
-        "location": "Remote",
-        "tagline": "Turning data into insights",
-        "skills": ["SQL", "Python", "ETL"],
-        "focusArea": "Data Architecture",
-        "curriculum": "Complete Data Engineering Roadmap 2025",
-        "status": "Available for roles",
-        "dailyGoal": 2
-    },
-    "settings": {
-        "theme": "dark",
-        "notifications": true,
-        "github": "",
-        "linkedin": "",
-        "twitter": ""
-    },
-    "entries": [],
-    "resources": [],
-    "phases": [
-        "Phase 1-2: Foundations",
-        "Phase 3-4: Essential Developer Skills",
-        "Phase 5-6: Core Concepts & Cloud Platforms",
-        "Phase 7-8: Big Data Processing & Orchestration",
-        "Phase 9-10: Data Warehousing & Real-Time Streaming",
-        "Phase 11-12: Infrastructure & Data Quality",
-        "Phase 13: Building Your Portfolio"
-    ]
-}
->>>>>>> a6c1614 (Course phases update)
