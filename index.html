@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -29,6 +29,20 @@
 </head>
 
 <body>
+
+    <!-- DATA SCIENCE BACKGROUND PARTICLES -->
+    <div class="bg-particles" id="bgParticles"></div>
+
+    <!-- SVG GRADIENT DEFS for ring chart -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#00d4aa"/>
+          <stop offset="50%"  stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#a855f7"/>
+        </linearGradient>
+      </defs>
+    </svg>
 
     <!-- CLOUD LOADER OVERLAY -->
     <div id="cloudLoader" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary, #0a0c10);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
@@ -906,6 +920,136 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- DATA SCIENCE PARTICLE ANIMATION -->
+    <script>
+    (function() {
+      var container = document.getElementById('bgParticles');
+      if (!container) return;
+
+      // Colour palette matching the design system
+      var colours = [
+        'rgba(0,212,170,VAL)',   // teal
+        'rgba(255,123,53,VAL)',  // orange
+        'rgba(168,85,247,VAL)',  // purple
+        'rgba(59,130,246,VAL)',  // blue
+        'rgba(245,158,11,VAL)',  // gold
+        'rgba(16,185,129,VAL)',  // green
+      ];
+
+      // Data science inspired shapes: circles (nodes), squares (matrices), diamonds (data points)
+      function createParticle() {
+        var el = document.createElement('div');
+        var size = Math.random() * 6 + 2;           // 2–8px
+        var col  = colours[Math.floor(Math.random() * colours.length)];
+        var opacity = (Math.random() * 0.4 + 0.2).toFixed(2);
+        var color = col.replace('VAL', opacity);
+        var left  = Math.random() * 100;
+        var dur   = Math.random() * 20 + 15;        // 15–35s
+        var delay = Math.random() * 20;
+        var type  = Math.floor(Math.random() * 3);  // 0=circle 1=square 2=diamond
+
+        el.style.cssText = [
+          'position:absolute',
+          'width:' + size + 'px',
+          'height:' + size + 'px',
+          'left:' + left + '%',
+          'bottom:-20px',
+          'background:' + color,
+          'box-shadow: 0 0 ' + (size*2) + 'px ' + color,
+          'animation: dsFloat ' + dur + 's ' + delay + 's linear infinite',
+          'opacity:0',
+          type === 0 ? 'border-radius:50%' :
+          type === 1 ? 'border-radius:2px' :
+                       'border-radius:2px;transform:rotate(45deg)'
+        ].join(';');
+
+        container.appendChild(el);
+      }
+
+      // Create 35 particles
+      for (var i = 0; i < 35; i++) createParticle();
+
+      // Connection lines canvas (subtle network graph effect)
+      var canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.25';
+      document.body.insertBefore(canvas, document.getElementById('mainContent'));
+
+      function resizeCanvas() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      var nodes = [];
+      var NODE_COUNT = 18;
+      var palette = ['#00d4aa','#ff7b35','#a855f7','#3b82f6','#f59e0b'];
+
+      for (var j = 0; j < NODE_COUNT; j++) {
+        nodes.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          r: Math.random() * 3 + 1.5,
+          col: palette[Math.floor(Math.random() * palette.length)]
+        });
+      }
+
+      var ctx = canvas.getContext('2d');
+      var MAX_DIST = 180;
+      var raf;
+
+      function drawNetwork() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update positions
+        nodes.forEach(function(n) {
+          n.x += n.vx;
+          n.y += n.vy;
+          if (n.x < 0 || n.x > canvas.width)  n.vx *= -1;
+          if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+        });
+
+        // Draw edges
+        for (var a = 0; a < nodes.length; a++) {
+          for (var b = a + 1; b < nodes.length; b++) {
+            var dx = nodes[a].x - nodes[b].x;
+            var dy = nodes[a].y - nodes[b].y;
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < MAX_DIST) {
+              var alpha = (1 - dist / MAX_DIST) * 0.35;
+              ctx.beginPath();
+              ctx.moveTo(nodes[a].x, nodes[a].y);
+              ctx.lineTo(nodes[b].x, nodes[b].y);
+              ctx.strokeStyle = 'rgba(0,212,170,' + alpha + ')';
+              ctx.lineWidth = 0.8;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Draw nodes
+        nodes.forEach(function(n) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          ctx.fillStyle = n.col;
+          ctx.shadowBlur  = 8;
+          ctx.shadowColor = n.col;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+
+        raf = requestAnimationFrame(drawNetwork);
+      }
+
+      // Only run if user hasn't requested reduced motion
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        drawNetwork();
+      }
+    })();
+    </script>
 
     </div><!-- end #mainContent -->
 </body>
