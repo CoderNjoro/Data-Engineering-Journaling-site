@@ -840,6 +840,38 @@
         </div>
     </div>
 
+    <!-- PDF READER OVERLAY -->
+    <div id="pdfReaderModal" class="modal-overlay" onclick="closePdfReaderModal(event)">
+        <div class="modal-box modal-full" style="display:flex; flex-direction:column; height:90vh; max-width: 95vw; width: 95vw;">
+            <div class="modal-top" style="display:flex; align-items:center; justify-content:space-between; padding:12px 24px;">
+                <h3 id="pdfReaderTitle" style="margin:0; font-size:1.1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:40%;">Reading Resource</h3>
+                <div style="display:flex; align-items:center; gap:8px; margin-left:auto; margin-right:20px;">
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">Page:</span>
+                    <input type="number" id="pdfCurPage" style="width:58px; padding:3px 6px; font-size:0.8rem; background:rgba(255,255,255,0.04); border:1px solid var(--border-strong); border-radius:4px;" min="0" title="Current page">
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">/</span>
+                    <input type="number" id="pdfTotPage" style="width:58px; padding:3px 6px; font-size:0.8rem; background:rgba(255,255,255,0.04); border:1px solid var(--border-strong); border-radius:4px;" min="0" title="Total pages">
+                    <button class="btn-primary btn-sm" onclick="savePdfReaderProgress()" style="padding:4px 10px; font-size:0.72rem; border-radius:4px;">Save Progress</button>
+                </div>
+                <button class="modal-close-btn" onclick="closePdfReaderModalBtn()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div style="display:flex; flex:1; overflow:hidden;">
+                <!-- PDF Viewer Iframe -->
+                <iframe id="pdfReaderIframe" style="flex:1; border:none; background:#111622;" src=""></iframe>
+                
+                <!-- Side notes panel -->
+                <div id="pdfNotesPanel" style="width:300px; border-left:1px solid var(--border); padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--bg-surface); overflow-y:auto;">
+                    <h4 style="font-family:var(--font-head); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); font-weight:800;">My Study Notes</h4>
+                    <textarea id="pdfReaderNotes" style="flex:1; resize:none; padding:12px; font-size:0.82rem; line-height:1.6; background:rgba(255,255,255,0.02); border:1px solid var(--border-strong); border-radius:6px; color:var(--text-primary);" placeholder="Write any notes, highlights, or questions here..."></textarea>
+                    <button class="btn-secondary w-full" onclick="savePdfReaderNotes()" style="padding:8px 12px; font-size:0.75rem;">Save Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ HIDDEN ADMIN LOGIN MODAL (Ctrl+Shift+A) ═══ -->
     <div id="adminLoginModal" class="modal-overlay" onclick="closeAdminModal(event)">
         <div class="modal-box admin-login-modal">

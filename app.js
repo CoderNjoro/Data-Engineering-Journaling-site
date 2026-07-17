@@ -422,11 +422,22 @@ async function saveEntry(event) {
 
     const files = document.getElementById('entryMedia').files;
     for (let file of files) {
-        entry.media.push({
-            type: file.type.startsWith('image') ? 'image' : 'video',
-            name: file.name,
-            data: await toBase64(file)
-        });
+        try {
+            const uploadRes = await uploadMediaFile(file);
+            entry.media.push({
+                type: file.type.startsWith('image') ? 'image' : 'video',
+                name: file.name,
+                url: uploadRes.url
+            });
+        } catch (e) {
+            console.error('Media upload failed:', e);
+            showToast('Media upload failed: ' + e.message + '. Saving base64 fallback.', 'warning');
+            entry.media.push({
+                type: file.type.startsWith('image') ? 'image' : 'video',
+                name: file.name,
+                data: await toBase64(file)
+            });
+        }
     }
 
     data.entries.push(entry);
@@ -774,6 +785,13 @@ async function saveResource(event) {
     event.preventDefault();
     if (!isAdmin) return;
 
+    const btn = event.target.querySelector('button[type="submit"]');
+    const oldText = btn ? btn.textContent : 'Add Resource';
+    if (btn) {
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
+    }
+
     const rc = document.getElementById('resourceCategory');
     const res = {
         id: Date.now(),
@@ -781,19 +799,35 @@ async function saveResource(event) {
         url: document.getElementById('resourceUrl').value || '#',
         category: rc ? rc.value : 'Other',
         fileData: null,
-        fileName: null
+        fileName: null,
+        currentPage: 0,
+        totalPages: 0,
+        lastStudied: null
     };
 
     const fi = document.getElementById('resourceFile');
     if (fi && fi.files.length > 0) {
         const f = fi.files[0];
-        res.fileData = await toBase64(f);
-        res.fileName = f.name;
+        try {
+            const uploadRes = await uploadMediaFile(f);
+            res.url = uploadRes.url;
+            res.fileName = f.name;
+        } catch (e) {
+            console.error('Resource upload failed:', e);
+            showToast('Cloud upload failed: ' + e.message + '. Saving base64 fallback.', 'warning');
+            res.fileData = await toBase64(f);
+            res.fileName = f.name;
+        }
     }
 
     data.resources.push(res);
     const ok = await saveData();
     
+    if (btn) {
+        btn.textContent = oldText;
+        btn.disabled = false;
+    }
+
     if (!ok) {
         data.resources.pop();
         return;
@@ -802,6 +836,8 @@ async function saveResource(event) {
     closeResourceModalBtn();
     event.target.reset();
     renderResources();
+    showToast('Resource added to library.');
+}
     showToast('Resource added to library.');
 }
 
