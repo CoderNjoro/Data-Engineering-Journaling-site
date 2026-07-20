@@ -78,7 +78,7 @@
     "Phase 13: Building Your Portfolio"
   ],
   "settings": {
-    "emailReminders": false,
+    "emailReminders": true,
     "reminderTime": "20:00",
     "reminderEmail": "",
     "ejsPublicKey": "",
